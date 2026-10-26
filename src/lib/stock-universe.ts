@@ -1,0 +1,43 @@
+/**
+ * Scan universe for the Wheel pages: a bundled list of large, liquid US stocks (an approximation of the S&P 500
+ * by market cap, which is where optionable A/A+ quality names live). It is NOT an official index feed.
+ * Tickers that no longer exist simply fail to hydrate and are skipped. Add your own with WHEEL_EXTRA_SYMBOLS
+ * (comma-separated) in .env. Yahoo spells share classes with a dash (BRK-B).
+ *
+ * Quarterly refresh spec: see docs/wheel-methodology.md §1 and scripts/universe-refresh.ts
+ */
+import { isValidTicker } from "./universe";
+
+const LIST = `
+AAPL MSFT NVDA AVGO ORCL CRM ADBE AMD CSCO ACN IBM INTU NOW QCOM TXN AMAT MU LRCX KLAC ADI PANW SNPS CDNS ANET CRWD FTNT
+ROP APH MSI TEL GLW HPQ HPE DELL NTAP WDC STX KEYS TYL PTC FICO ADSK WDAY PLTR MCHP ON NXPI MPWR TER FSLR GDDY EPAM IT CDW
+AKAM FFIV GEN TRMB ZBRA TDY
+GOOGL GOOG META NFLX DIS CMCSA T VZ TMUS CHTR EA TTWO WBD FOXA NWSA LYV OMC MTCH
+AMZN TSLA HD MCD NKE LOW SBUX BKNG TJX ABNB CMG MAR HLT ORLY AZO ROST YUM DHI LEN PHM NVR GM F RCL CCL NCLH EXPE ULTA BBY
+DRI DPZ LVS WYNN MGM GRMN POOL TPR RL LULU DECK KMX GPC APTV BWA TSCO
+WMT COST PG KO PEP PM MO MDLZ CL KMB GIS KHC STZ SYY HSY ADM KR MNST KDP TGT DG DLTR EL CHD CLX HRL MKC SJM CAG CPB TSN BG LW
+LLY UNH JNJ ABBV MRK TMO ABT DHR AMGN ISRG PFE BMY GILD VRTX SYK BSX MDT ELV CI CVS HCA ZTS REGN MCK COR CAH BDX EW IQV A IDXX
+RMD MTD WAT HUM CNC DXCM BIIB STE ZBH BAX HOLX LH DGX WST PODD ALGN INCY VTRS
+BRK-B JPM V MA BAC WFC GS MS AXP C SCHW BLK SPGI MCO CB PGR MMC AON ICE CME PNC USB TFC COF MET PRU AIG AFL ALL TRV HIG BK STT
+NTRS FITB HBAN RF KEY CFG MTB CINF L WRB NDAQ MSCI TROW BEN IVZ AJG BRO ACGL PYPL FIS GPN
+GE CAT RTX HON UNP UPS BA DE LMT ADP ETN PH ITW EMR NOC GD MMM CSX NSC FDX WM RSG CTAS PAYX CMI PCAR TT JCI CARR OTIS ROK AME
+FAST VRSK ODFL URI LHX TDG PWR XYL DOV HWM IR WAB EFX LUV DAL UAL SNA SWK GWW CPRT EXPD CHRW JBHT HUBB LII MAS BLDR AXON
+XOM CVX COP EOG SLB OXY PSX MPC VLO WMB KMI OKE BKR HAL FANG DVN CTRA TRGP EQT APA
+NEE SO DUK CEG SRE AEP D EXC XEL PEG ED WEC EIX ETR DTE AEE FE PPL CMS CNP ATO NI LNT EVRG AES
+PLD AMT EQIX WELL SPG PSA O CCI DLR CBRE AVB EQR VICI EXR SBAC WY IRM ARE VTR INVH MAA ESS KIM REG UDR HST CPT
+LIN SHW APD ECL FCX NEM DOW DD CTVA NUE VMC MLM PPG IFF ALB STLD LYB MOS CF BALL AMCR PKG IP
+`;
+
+export const BASE_STOCK_UNIVERSE: string[] = [...new Set(LIST.split(/\s+/).filter(Boolean))];
+
+// Version stamped when the bundled list was last reviewed. Updated by scripts/universe-refresh.ts
+export const UNIVERSE_VERSION = "2026-Q1";
+export const UNIVERSE_AS_OF = "2026-03-15";
+
+export function stockUniverse(extraCsv: string | undefined | null = process.env.WHEEL_EXTRA_SYMBOLS): string[] {
+  const extra = (extraCsv ?? "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => s && isValidTicker(s));
+  return [...new Set([...BASE_STOCK_UNIVERSE, ...extra])];
+}
