@@ -1,7 +1,51 @@
+# Local / single-host deployment. Secrets come from .env (see .env.example) - nothing sensitive is hard-coded here.
+#   cp .env.example .env   # then fill in the REQUIRED values
+#   docker compose up --build -d
 services:
-  app:
-    build:
-      context: .
-    ports:
-      - "8080:80"
+  db:
+    image: postgres:16-alpine
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: etf
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: etf
+    # Not published to the host: only the web container can reach the database.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U etf -d etf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://etf:${POSTGRES_PASSWORD}@db:5432/etf
+      PORTFOLIO_ENCRYPTION_KEY: ${PORTFOLIO_ENCRYPTION_KEY:?set PORTFOLIO_ENCRYPTION_KEY in .env}
+      APP_USERNAME: ${APP_USERNAME:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:?set APP_PASSWORD in .env}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:?set SEC_USER_AGENT in .env (include your email)}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      # Options wheel: Alpaca is the primary option-chain source, Yahoo the automatic backup.
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
+      ALPACA_PAPER: ${ALPACA_PAPER:-true}
+      ALPACA_OPTIONS_FEED: ${ALPACA_OPTIONS_FEED:-indicative}
+      OPTIONS_PROVIDER: ${OPTIONS_PROVIDER:-auto}
+      WHEEL_SCANNER: ${WHEEL_SCANNER:-true}
+      WHEEL_EXTRA_SYMBOLS: ${WHEEL_EXTRA_SYMBOLS:-}
+      RISK_FREE_RATE: ${RISK_FREE_RATE:-}
+      QUOTE_SNAPSHOTS: ${QUOTE_SNAPSHOTS:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

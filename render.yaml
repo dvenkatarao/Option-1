@@ -1,0 +1,46 @@
+# Render Blueprint: one-click test environment (web service + managed Postgres).
+# Render dashboard -> New -> Blueprint -> select this repo. Secrets are generated for you and shown
+# under the service's Environment tab (APP_PASSWORD is the login password).
+services:
+  - type: web
+    name: wheelcore-intelligence-terminal
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wheelcore-intelligence-db
+          property: connectionString
+      - key: PORTFOLIO_ENCRYPTION_KEY
+        generateValue: true
+      - key: APP_USERNAME
+        value: admin
+      - key: APP_PASSWORD
+        generateValue: true
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: SEC_USER_AGENT
+        sync: false # prompted at deploy time: "WheelCore you@yourdomain.com"
+      - key: FRED_API_KEY
+        sync: false
+      - key: FINNHUB_API_KEY
+        sync: false
+      - key: ALPACA_API_KEY # options wheel: primary option-chain source (free Alpaca account); Yahoo is the backup
+        sync: false
+      - key: ALPACA_SECRET_KEY
+        sync: false
+      - key: ALPACA_PAPER
+        value: "true"
+      - key: OPTIONS_PROVIDER
+        value: auto
+      - key: WHEEL_SCANNER
+        value: "true"
+
+databases:
+  - name: wheelcore-intelligence-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"

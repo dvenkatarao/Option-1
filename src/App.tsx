@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useMemo } from 'react';
 import { MainTabType, Navbar } from './components/layout/Navbar';
 import { MarketTickerBar } from './components/layout/MarketTickerBar';
@@ -10,7 +12,11 @@ import { WheelOptionChainModal } from './components/wheel/WheelOptionChainModal'
 import { WheelSimulatorView } from './components/wheel/WheelSimulatorView';
 import { WheelTrackerView } from './components/wheel/WheelTrackerView';
 import { PortfolioStudioView } from './components/portfolio/PortfolioStudioView';
+import { PersistentPortfolioView } from './components/portfolio/PersistentPortfolioView';
 import { ResearchAcademyView } from './components/research/ResearchAcademyView';
+import { LiveResearchHub } from './components/live/LiveResearchHub';
+import { LiveEtfScreenerView } from './components/live/LiveEtfScreenerView';
+import { LiveWheelView } from './components/live/LiveWheelView';
 import { ETF_DATASET } from './data/etfData';
 import { WHEEL_STOCKS, ACTIVE_CAMPAIGNS } from './data/wheelData';
 import { ETFData, WheelStock, OptionContract, ActiveWheelCampaign } from './types';
@@ -31,8 +37,13 @@ export function App() {
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>(['VOO', 'SCHD', 'JEPI']);
   const [isCompareViewOpen, setIsCompareViewOpen] = useState(false);
 
+  // Workstation view toggles: keep the original demo tools beside provider-backed services.
+  const [showLiveEtfScreener, setShowLiveEtfScreener] = useState(false);
+  const [portfolioView, setPortfolioView] = useState<'studio' | 'accounts'>('studio');
+  const [researchView, setResearchView] = useState<'academy' | 'live'>('academy');
+
   // Wheel sub-tab
-  const [wheelSubTab, setWheelSubTab] = useState<'scanner' | 'simulator' | 'tracker'>('scanner');
+  const [wheelSubTab, setWheelSubTab] = useState<'scanner' | 'simulator' | 'tracker' | 'live'>('scanner');
   const [simulatorInitialStock, setSimulatorInitialStock] = useState<WheelStock | undefined>(undefined);
   const [simulatorInitialOption, setSimulatorInitialOption] = useState<OptionContract | undefined>(undefined);
 
@@ -108,7 +119,7 @@ export function App() {
           <div className="mb-6 p-4 rounded-2xl bg-slate-900 border border-emerald-500/50 shadow-2xl space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <span className="text-xs font-mono font-bold text-emerald-400">
-                Search Results for "{searchQuery}"
+                Search Results for &quot;{searchQuery}&quot;
               </span>
               <button
                 onClick={() => setSearchQuery('')}
@@ -196,12 +207,12 @@ export function App() {
         {/* WORKSTATION 2: ETF Intelligence Screener & Compare */}
         {activeTab === 'etfs' && (
           <div className="space-y-6">
-            {/* View Switcher: Screener vs Side-by-Side Compare */}
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+            {/* Keep the original workstation views and add provider-backed research alongside them. */}
+            <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
               <button
-                onClick={() => setIsCompareViewOpen(false)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                  !isCompareViewOpen
+                onClick={() => { setShowLiveEtfScreener(false); setIsCompareViewOpen(false); }}
+                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                  !showLiveEtfScreener && !isCompareViewOpen
                     ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                 }`}
@@ -210,8 +221,19 @@ export function App() {
               </button>
 
               <button
+                onClick={() => { setShowLiveEtfScreener(true); setIsCompareViewOpen(false); }}
+                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                  showLiveEtfScreener && !isCompareViewOpen
+                    ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Live ETF Research
+              </button>
+
+              <button
                 onClick={() => setIsCompareViewOpen(true)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
                   isCompareViewOpen
                     ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200'
@@ -225,13 +247,15 @@ export function App() {
             </div>
 
             {!isCompareViewOpen ? (
-              <ETFScreenerView
-                etfs={etfs}
-                onSelectETF={(etf) => setSelectedETF(etf)}
-                selectedForCompare={selectedForCompare}
-                onToggleCompare={handleToggleCompare}
-                onOpenCompare={() => setIsCompareViewOpen(true)}
-              />
+              showLiveEtfScreener ? <LiveEtfScreenerView /> : (
+                <ETFScreenerView
+                  etfs={etfs}
+                  onSelectETF={(etf) => setSelectedETF(etf)}
+                  selectedForCompare={selectedForCompare}
+                  onToggleCompare={handleToggleCompare}
+                  onOpenCompare={() => setIsCompareViewOpen(true)}
+                />
+              )
             ) : (
               <ETFCompareView
                 allETFs={etfs}
@@ -284,6 +308,17 @@ export function App() {
                   {activeCampaigns.length}
                 </span>
               </button>
+
+              <button
+                onClick={() => setWheelSubTab('live')}
+                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                  wheelSubTab === 'live'
+                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                4. Live Provider Scanner & Journal
+              </button>
             </div>
 
             {wheelSubTab === 'scanner' && (
@@ -311,27 +346,45 @@ export function App() {
                 onNavigateToScanner={() => setWheelSubTab('scanner')}
               />
             )}
+
+            {wheelSubTab === 'live' && <LiveWheelView />}
           </div>
         )}
 
-        {/* WORKSTATION 4: Self-Guided Portfolio Studio */}
+        {/* WORKSTATION 4: Preserve the original educational simulator and add the database-backed ledger. */}
         {activeTab === 'portfolio' && (
-          <PortfolioStudioView
-            etfs={etfs}
-            wheelStocks={wheelStocks}
-            onSelectETF={(etf) => setSelectedETF(etf)}
-            onSelectWheelStock={(stock) => handleSelectStockForSimulator(stock)}
-          />
+          <div className="space-y-5">
+            <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
+              <button onClick={() => setPortfolioView('studio')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${portfolioView === 'studio' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Portfolio Studio · Simulator</button>
+              <button onClick={() => setPortfolioView('accounts')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${portfolioView === 'accounts' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Persistent Accounts & Ledger</button>
+            </div>
+            {portfolioView === 'studio' ? (
+              <PortfolioStudioView
+                etfs={etfs}
+                wheelStocks={wheelStocks}
+                onSelectETF={(etf) => setSelectedETF(etf)}
+                onSelectWheelStock={(stock) => handleSelectStockForSimulator(stock)}
+              />
+            ) : <PersistentPortfolioView />}
+          </div>
         )}
 
-        {/* WORKSTATION 5: Research & Strategy Academy */}
+        {/* WORKSTATION 5: Keep the learning academy; live feeds and data-driven research are additive. */}
         {activeTab === 'research' && (
-          <ResearchAcademyView
-            etfs={etfs}
-            wheelStocks={wheelStocks}
-            onSelectETF={(etf) => setSelectedETF(etf)}
-            onSelectWheelStock={(stock) => handleSelectStockForSimulator(stock)}
-          />
+          <div className="space-y-5">
+            <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
+              <button onClick={() => setResearchView('academy')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${researchView === 'academy' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Research Academy · Learning</button>
+              <button onClick={() => setResearchView('live')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${researchView === 'live' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Live Research & Sources</button>
+            </div>
+            {researchView === 'academy' ? (
+              <ResearchAcademyView
+                etfs={etfs}
+                wheelStocks={wheelStocks}
+                onSelectETF={(etf) => setSelectedETF(etf)}
+                onSelectWheelStock={(stock) => handleSelectStockForSimulator(stock)}
+              />
+            ) : <LiveResearchHub />}
+          </div>
         )}
       </main>
 
@@ -372,11 +425,11 @@ export function App() {
           </div>
 
           <div className="flex items-center gap-4 text-[11px]">
-            <span className="text-slate-400">Data Feed: Live Simulation</span>
+            <span className="text-slate-400">Data: Provider feeds + clearly labeled demos</span>
             <span>•</span>
-            <span className="text-slate-400">IRS Section 1256 Ready</span>
+            <span className="text-slate-400">Persistent portfolio & trade journals</span>
             <span>•</span>
-            <span className="text-slate-400">Options Wheel Risk Engine</span>
+            <span className="text-slate-400">Options wheel research tools</span>
           </div>
         </div>
 

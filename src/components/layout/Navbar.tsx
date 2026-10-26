@@ -146,8 +146,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <div className="hidden sm:flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono">
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-slate-400">Regime:</span>
-              <span className="text-cyan-300 font-semibold">Low Vol / Bull Trend</span>
+              <span className="text-slate-400">Macro:</span>
+              <span className="text-cyan-300 font-semibold">See live signals</span>
             </div>
           </div>
         </div>
