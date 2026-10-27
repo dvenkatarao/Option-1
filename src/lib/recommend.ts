@@ -1,7 +1,7 @@
 import type { ScreenRow } from "@/types/liveScreener";
 
 export type Goal = "income" | "growth" | "lowcost" | "defensive" | "balanced";
-export type Metric = "expense" | "yieldTtm" | "aum" | "r3y" | "r5y" | "vol3y" | "dd3y" | "sharpe" | "priceRet3y" | "divCagr3y";
+export type Metric = "expense" | "yieldTtm" | "aum" | "r3y" | "r5y" | "vol3y" | "dd3y" | "sharpe" | "priceRet3y" | "divCagr3y" | "analystRec";
 
 export type Weight = { metric: Metric; label: string; w: number; higherIsBetter: boolean; /** Overrides the "(higher/lower is better)" text where that wording would mislead. */ hint?: string };
 
@@ -74,6 +74,7 @@ export const METRICS: Record<Metric, { label: string; higherIsBetter: boolean; h
   divCagr3y: { label: "3Y distribution CAGR", higherIsBetter: true },
   priceRet3y: { label: "3Y price return (NAV-erosion check)", higherIsBetter: true },
   aum: { label: "Assets under management", higherIsBetter: true },
+  analystRec: { label: "Holdings-weighted analyst consensus (1=strong buy, 5=sell)", higherIsBetter: false },
 };
 export const METRIC_KEYS = Object.keys(METRICS) as Metric[];
 

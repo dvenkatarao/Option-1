@@ -7,7 +7,7 @@ function row(over: Partial<ScreenRow>): ScreenRow {
   return {
     ticker: `T${n++}`, name: null, category: null, family: null, leveraged: false, assetClass: "Equity", rateTag: "neutral" as const, rateLabel: "Neutral — mixed", quality: null, qualityScore: null, price: 1, changePct: 0,
     expense: 0.002, yieldTtm: 0.02, aum: 1e10, ytd: 0.1, r1y: 0.1, r3y: 0.1, r5y: 0.1, vol3y: 0.15, dd3y: -0.2, sharpe: 0.5,
-    erosion: "None", priceRet3y: 0.05, capFunded: 0, divCagr3y: 0.05, freq: "Quarterly", ...over,
+    erosion: "None", priceRet3y: 0.05, capFunded: 0, divCagr3y: 0.05, analystRec: null, analystCoverage: null, freq: "Quarterly", ...over,
   };
 }
 const sum = (w: { w: number }[]) => w.reduce((s, x) => s + x.w, 0);
@@ -43,6 +43,24 @@ describe("drawdown direction", () => {
     const s = scoreGoal(rows, "balanced", { weights: w });
     expect(s[0].row.dd3y).toBe(-0.1);
     expect(s[s.length - 1].row.dd3y).toBe(-0.5);
+  });
+});
+
+describe("optional holdings-weighted analyst metric", () => {
+  const weights = resolveWeights("balanced", { analystRec: 1 });
+
+  it("ranks lower recommendation means higher (Yahoo: 1=strong buy, 5=sell)", () => {
+    const rows = [1, 2, 3, 4, 5, 4.5].map((analystRec) => row({ analystRec, analystCoverage: 0.8 }));
+    const ranked = scoreGoal(rows, "balanced", { weights });
+    expect(ranked[0].row.analystRec).toBe(1);
+    expect(ranked[ranked.length - 1].row.analystRec).toBe(5);
+  });
+
+  it("omits funds without sufficient analyst data when the optional metric is the only score input", () => {
+    const rows = [1, 2, 3, 4, 5, null].map((analystRec) => row({ analystRec, analystCoverage: analystRec == null ? 0.3 : 0.8 }));
+    const ranked = scoreGoal(rows, "balanced", { weights });
+    expect(ranked).toHaveLength(5);
+    expect(ranked.every((entry) => entry.row.analystRec != null)).toBe(true);
   });
 });
 

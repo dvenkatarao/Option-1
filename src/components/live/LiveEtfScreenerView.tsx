@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, ChevronDown, Database, ExternalLink, RefreshCw, Search, X } from "lucide-react";
+import { Activity, AlertTriangle, ChevronDown, Database, ExternalLink, RefreshCw, Search, ShieldCheck, X } from "lucide-react";
 import type { ScreenRow } from "../../types/liveScreener";
 
 type ScreenerResponse = {
@@ -49,7 +49,9 @@ type EtfDetail = {
   quote: { price: number | null; changePct: number | null; marketState?: string } | null;
   quoteFetchedAt: string | null;
   quoteStale: boolean;
-  analyst: { consensus: { recMean: number | null; upside: number | null; coverageWeight: number; counted: number; listed: number }; items: { symbol: string; name: string; weight: number; recKey: string | null; upside: number | null }[] } | null;
+  technical: { asOf: string | null; bars: number; price: number | null; sma50: number | null; sma200: number | null; rsi14: number | null; state: "uptrend" | "downtrend" | "mixed" | "insufficient"; rsiState: "oversold" | "neutral" | "overbought" | "unavailable"; aboveSma50: boolean | null; aboveSma200: boolean | null; movingAverageAlignment: "50d-above-200d" | "50d-below-200d" | null; methodology: string };
+  takeaway: { headline: string; detail: string; suitable: string; watch: string; tone: "good" | "caution" | "warn"; context: { historyAsOf: string | null; quoteFetchedAt: string | null; sources: string[] } } | null;
+  analyst: { consensus: { recMean: number | null; upside: number | null; coverageWeight: number; recCoverageWeight?: number; upsideCoverageWeight?: number; counted: number; listed: number }; items: { symbol: string; name: string; weight: number; recKey: string | null; upside: number | null }[] } | null;
   news: { title: string; link: string; date: string | null; source: string; summary: string | null }[];
   newsFetchedAt: string | null;
   newsStale: boolean;
@@ -166,6 +168,18 @@ function EtfDetail({ ticker, onClose }: { ticker: string; onClose: () => void })
               <Metric label="NAV (provider)" value={money(detail.fund.navPrice)} />
               <Metric label="Last ex-date" value={detail.fund.metrics?.dividends.lastExDate ?? "N/A"} />
             </div>
+            {detail.takeaway && <section className={`rounded-xl border p-4 ${detail.takeaway.tone === "warn" ? "border-rose-500/30 bg-rose-500/5" : detail.takeaway.tone === "caution" ? "border-amber-500/30 bg-amber-500/5" : "border-emerald-500/20 bg-emerald-500/5"}`}>
+              <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-300" /><h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Plain-English ETF takeaway</h4><span className="rounded-full border border-slate-700 bg-slate-950/70 px-2 py-0.5 text-[9px] text-slate-400">rules-based, not personalized</span></div>
+              <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-100">{detail.takeaway.headline}</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">{detail.takeaway.detail}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Heuristic context</div><p className="mt-1 text-xs leading-relaxed text-slate-300">{detail.takeaway.suitable}</p></div><div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3"><div className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">What to watch</div><p className="mt-1 text-xs leading-relaxed text-slate-300">{detail.takeaway.watch}</p></div></div>
+              <p className="mt-3 text-[9px] leading-relaxed text-slate-600">Source context: {detail.takeaway.context.sources.join(" · ") || "provider metadata unavailable"}. Price history as of {detail.takeaway.context.historyAsOf ?? "N/A"}; quote fetched {stamp(detail.takeaway.context.quoteFetchedAt)}.</p>
+            </section>}
+            <section className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2"><div><h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Deterministic trend signals</h4><p className="mt-1 text-[10px] text-slate-500">Stored daily price history · as of {detail.technical.asOf ?? "N/A"} · {detail.technical.bars} valid bars</p></div><span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${detail.technical.state === "uptrend" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : detail.technical.state === "downtrend" ? "border-rose-500/20 bg-rose-500/10 text-rose-300" : "border-amber-500/20 bg-amber-500/10 text-amber-200"}`}>{detail.technical.state}</span></div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Last split-adjusted close" value={money(detail.technical.price)} hint={detail.technical.aboveSma50 == null ? "Not enough history" : detail.technical.aboveSma50 ? "Above 50-day average" : "At/below 50-day average"} /><Metric label="SMA 50" value={money(detail.technical.sma50)} /><Metric label="SMA 200" value={money(detail.technical.sma200)} hint={detail.technical.movingAverageAlignment ?? "Requires 200 closes"} /><Metric label="RSI 14" value={detail.technical.rsi14?.toFixed(1) ?? "N/A"} hint={detail.technical.rsiState} /></div>
+              <p className="mt-3 text-[9px] leading-relaxed text-slate-600">{detail.technical.methodology}</p>
+            </section>
             <ReturnChart history={detail.history} />
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-xl border border-slate-800 bg-slate-950 p-4">
@@ -175,7 +189,7 @@ function EtfDetail({ ticker, onClose }: { ticker: string; onClose: () => void })
               </section>
               <section className="rounded-xl border border-slate-800 bg-slate-950 p-4">
                 <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-300">Holdings-weighted analyst view</h4>
-                {detail.analyst ? <><div className="grid grid-cols-3 gap-2"><Metric label="Recommendation" value={detail.analyst.consensus.recMean?.toFixed(2) ?? "N/A"} /><Metric label="Target upside" value={pct(detail.analyst.consensus.upside)} /><Metric label="Coverage" value={`${detail.analyst.consensus.counted}/${detail.analyst.consensus.listed}`} /></div><p className="mt-2 text-[10px] text-slate-500">Covered holding weight: {pct(detail.analyst.consensus.coverageWeight)}. Stock opinions are not ETF-level recommendations.</p></> : <p className="text-xs text-slate-500">No holdings-level analyst data is available.</p>}
+                {detail.analyst ? <><div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Recommendation mean" value={detail.analyst.consensus.recMean?.toFixed(2) ?? "N/A"} hint="1=strong buy · 5=sell" /><Metric label="Target upside" value={pct(detail.analyst.consensus.upside)} /><Metric label="Rec. data coverage" value={pct(detail.analyst.consensus.recCoverageWeight)} /><Metric label="Target data coverage" value={pct(detail.analyst.consensus.upsideCoverageWeight)} /></div><p className="mt-2 text-[10px] text-slate-500">Analyst data for {detail.analyst.consensus.counted}/{detail.analyst.consensus.listed} listed holdings; recommendation coverage is the share of listed top-holdings weight with a stock-level recommendation. Not an ETF-level recommendation.</p></> : <p className="text-xs text-slate-500">No holdings-level analyst data is available.</p>}
                 <div className="mt-4 border-t border-slate-800 pt-3"><h5 className="mb-2 text-[10px] uppercase tracking-wider text-slate-500">Recent headlines</h5>{detail.news.length ? <div className="space-y-2">{detail.news.slice(0, 4).map((item, index) => <a key={`${item.link}-${index}`} href={item.link} target="_blank" rel="noreferrer" className="flex items-start justify-between gap-3 text-xs text-slate-300 hover:text-emerald-300"><span className="line-clamp-2">{item.title}</span><ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-slate-500" /></a>)}</div> : <p className="text-xs text-slate-500">No headlines available.</p>}</div>
               </section>
             </div>

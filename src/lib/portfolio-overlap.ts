@@ -15,7 +15,7 @@ export type OverlapCell = {
   common: { symbol: string; wa: number; wb: number }[];
 };
 
-export function overlapBetween(a: { symbol: string; weight: number }[], b: { symbol: string; weight: number }[]): OverlapCell["common"] & { overlap: number } {
+export function overlapBetween(a: { symbol: string; weight: number }[], b: { symbol: string; weight: number }[]): { overlap: number; common: OverlapCell["common"] } {
   const mb = new Map(b.map((h) => [h.symbol.toUpperCase(), h.weight]));
   let overlap = 0;
   const common: OverlapCell["common"] = [];
@@ -28,7 +28,7 @@ export function overlapBetween(a: { symbol: string; weight: number }[], b: { sym
       common.push({ symbol: sym, wa: ha.weight, wb });
     }
   }
-  return { overlap, common } as any;
+  return { overlap, common };
 }
 
 export function buildOverlapMatrix(tickers: string[], holdings: HoldingsMap): OverlapCell[] {
@@ -39,7 +39,7 @@ export function buildOverlapMatrix(tickers: string[], holdings: HoldingsMap): Ov
       const b = tickers[j];
       const ha = holdings.get(a) ?? [];
       const hb = holdings.get(b) ?? [];
-      const { overlap, common } = overlapBetween(ha as any, hb as any) as any;
+      const { overlap, common } = overlapBetween(ha, hb);
       // Diagonal = 1
       const ov = i === j ? 1 : overlap;
       out.push({ a, b, overlap: ov, overlapPct: ov * 100, common: i === j ? [] : common });
@@ -57,7 +57,11 @@ export function overlapMatrixForPortfolio(
   for (const t of uniq) {
     const prof = etfProfiles.get(t);
     if (!prof) continue;
-    holdings.set(t, prof.filter((h) => h.symbol && h.weight != null).map((h) => ({ symbol: h.symbol!, weight: h.weight! })) as any);
+    const weighted = prof.filter((h): h is { symbol: string; weight: number } =>
+      typeof h.symbol === "string" && h.symbol.length > 0 &&
+      typeof h.weight === "number" && Number.isFinite(h.weight) && h.weight >= 0,
+    );
+    holdings.set(t, weighted.map((h) => ({ symbol: h.symbol, weight: h.weight })));
   }
   return { tickers: uniq, cells: buildOverlapMatrix(uniq, holdings) };
 }

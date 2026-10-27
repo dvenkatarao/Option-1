@@ -19,7 +19,10 @@ The demo and provider-backed views are labeled separately. Data endpoints do not
 - News and regulatory events use government/SEC feeds; Finnhub's upcoming-earnings calendar is optional.
 - Options chains prefer Alpaca when configured and fall back to Yahoo Finance. The wheel screen applies deterministic liquidity, delta, spread, DTE, earnings and return filters; it is for research only and never routes orders.
 - PostgreSQL/Drizzle stores market-data cache, ETF history/profiles, stock fundamentals and technicals, wheel scans/IV snapshots, portfolios, holdings, transactions and saved wheel positions.
+- **Research → Live Research & Sources** includes a guided ETF starter allocation, stored-data similarity groups (5-year adjusted-return correlation ≥0.95 or reported top-holdings overlap ≥50%), and transparent rankings. Similarity overlap is a lower bound because provider holdings lists are partial. ETF detail adds deterministic 50/200-day trend context and RSI14 from stored split-adjusted closes; these are descriptive, not forecasts.
+- Holdings-weighted analyst consensus is opt-in (`/api/recommend?analyst=1`), contributes 10% only when recommendation data covers at least 50% of a fund's reported top-holdings weight, and returns coverage alongside rankings. Missing analyst values are never imputed.
 - Source catalog and field-population reports are available under **Research → Live Research & Sources**. The machine-readable coverage endpoint is `/api/coverage`; the provider spec is `/api/spec`.
+- Bundled dashboard, wheel, portfolio, screener, research-radar, and global-search examples are explicitly labeled as illustrative; they are not current quotes, broker positions, or realized performance. Provider-backed panels report their sources, as-of dates, or stale state where available.
 
 ## Run locally
 

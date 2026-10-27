@@ -227,11 +227,13 @@ async function stockAnalyst(symbol: string) {
 
 export async function getHoldingsAnalystConsensus(ticker: string) {
   const row = await getEtf(ticker);
-  const holdings = (row?.profile?.holdings ?? []).filter((h) => h.symbol && h.weight != null && /^[A-Z.\-]{1,6}$/.test(h.symbol));
+  const holdings = (row?.profile?.holdings ?? []).filter((h) => h.symbol && h.weight != null && h.weight > 0 && /^[A-Z.\-]{1,6}$/.test(h.symbol));
   if (!holdings.length) return null;
   const items = await mapLimit(holdings, 4, async (h): Promise<HoldingAnalyst | null> => {
     const a = await stockAnalyst(h.symbol!);
-    if (!a || (a.data.recMean == null && a.data.targetMean == null)) return null;
+    if (!a) return null;
+    const recMean = a.data.recMean != null && a.data.recMean >= 1 && a.data.recMean <= 5 ? a.data.recMean : null;
+    if (recMean == null && a.data.targetMean == null) return null;
     const upside = a.data.targetMean != null && a.data.price ? a.data.targetMean / a.data.price - 1 : null;
     return {
       symbol: h.symbol!,
@@ -240,7 +242,7 @@ export async function getHoldingsAnalystConsensus(ticker: string) {
       price: a.data.price,
       targetMean: a.data.targetMean,
       upside,
-      recMean: a.data.recMean,
+      recMean,
       recKey: a.data.recKey,
       analysts: a.data.analysts,
       trend: a.data.trend,
@@ -251,11 +253,16 @@ export async function getHoldingsAnalystConsensus(ticker: string) {
   const wRec = ok.filter((x) => x.recMean != null);
   const wUp = ok.filter((x) => x.upside != null);
   const sum = (arr: HoldingAnalyst[]) => arr.reduce((s, x) => s + x.weight, 0);
+  const totalListedWeight = holdings.reduce((s, h) => s + (h.weight ?? 0), 0);
   const consensus = {
     recMean: wRec.length ? wRec.reduce((s, x) => s + x.weight * x.recMean!, 0) / sum(wRec) : null,
     upside: wUp.length ? wUp.reduce((s, x) => s + x.weight * x.upside!, 0) / sum(wUp) : null,
     coverageWeight: sum(ok),
-    totalListedWeight: holdings.reduce((s, h) => s + (h.weight ?? 0), 0),
+    totalListedWeight,
+    /** Fraction of the reported top-holdings weight with an analyst recommendation (1 = 100%). */
+    recCoverageWeight: totalListedWeight > 0 ? sum(wRec) / totalListedWeight : null,
+    /** Fraction of the reported top-holdings weight with price-target data (1 = 100%). */
+    upsideCoverageWeight: totalListedWeight > 0 ? sum(wUp) / totalListedWeight : null,
     counted: ok.length,
     listed: holdings.length,
   };

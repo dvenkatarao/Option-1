@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActiveWheelCampaign, WheelStock } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import {
   RotateCw,
   Plus,
@@ -76,10 +77,10 @@ export const WheelTrackerView: React.FC<WheelTrackerViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <RotateCw className="w-6 h-6 text-emerald-400" />
-            <h1 className="text-2xl font-extrabold text-white">Active Wheel Positions & Journal</h1>
+            <h1 className="text-2xl font-extrabold text-white">Session Wheel Demo Tracker</h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Track ongoing cycles, theta decay milestones, cost basis reductions, and AI roll recommendations.
+            Review seeded examples and session-only entries; calculations are not a live broker journal or AI trade instruction.
           </p>
         </div>
 
@@ -89,52 +90,54 @@ export const WheelTrackerView: React.FC<WheelTrackerViewProps> = ({
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Log New Wheel Campaign</span>
+            <span>Log Demo Campaign</span>
           </button>
         </div>
       </div>
 
+      <IllustrativeDataNotice detail="Seeded positions and new entries are kept only in this browser session, use sample quote inputs, and are not connected to a broker. Use Persistent Accounts & Ledger for saved manual records." />
+
       {/* Summary Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs">
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span className="text-slate-400 block text-[10px] uppercase">Active Wheel Collateral</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Example Wheel Collateral</span>
           <span className="text-xl font-bold text-white mt-1 block">
             ${totalCollateral.toLocaleString()}
           </span>
-          <span className="text-[10px] text-slate-500">{campaigns.length} Active Positions</span>
+          <span className="text-[10px] text-slate-500">{campaigns.length} Session Entries</span>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span className="text-slate-400 block text-[10px] uppercase">Cumulative Premiums</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Example Premiums</span>
           <span className="text-xl font-bold text-emerald-400 mt-1 block">
             +${totalPremiumsCollected.toLocaleString()}
           </span>
-          <span className="text-[10px] text-slate-500">Harvested Cash Flow</span>
+          <span className="text-[10px] text-slate-500">Sample value</span>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span className="text-slate-400 block text-[10px] uppercase">Unrealized P&L</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Illustrative P&L</span>
           <span className="text-xl font-bold text-cyan-300 mt-1 block">
             +${totalUnrealizedPnL.toLocaleString()}
           </span>
-          <span className="text-[10px] text-emerald-400 font-semibold">Theta Decay at 60%</span>
+          <span className="text-[10px] text-emerald-400 font-semibold">Example decay assumption</span>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span className="text-slate-400 block text-[10px] uppercase">Realized Profit</span>
+          <span className="text-slate-400 block text-[10px] uppercase">Model Profit</span>
           <span className="text-xl font-bold text-emerald-400 mt-1 block">
             +${totalRealizedPnL.toLocaleString()}
           </span>
-          <span className="text-[10px] text-slate-500">Locked in Bank</span>
+          <span className="text-[10px] text-slate-500">Sample value</span>
         </div>
       </div>
 
       {/* Campaigns List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-white">Active Campaigns Breakdown</h2>
+          <h2 className="text-base font-bold text-white">Session Example Breakdown</h2>
           <span className="text-xs text-slate-400 font-mono">
-            Managed via 50% Profit Target Rule
+            Example 50% profit-target rule
           </span>
         </div>
 
@@ -227,10 +230,10 @@ export const WheelTrackerView: React.FC<WheelTrackerViewProps> = ({
                     </button>
                   ) : (
                     <button
-                      onClick={() => alert(`Locked in 50% profit on ${camp.symbol} ${camp.targetStrike} Put! Capital freed for next cycle.`)}
+                      onClick={() => alert(`Demo preview: ${camp.symbol} ${camp.targetStrike} Put reached its sample 50% profit target. No broker position or ledger entry was changed.`)}
                       className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition"
                     >
-                      Close at 50% Profit (+$310)
+                      Example close at 50% (+$310)
                     </button>
                   )}
                 </div>

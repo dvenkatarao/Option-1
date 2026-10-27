@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ETFData } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import {
   X,
   ShieldCheck,
@@ -97,10 +98,12 @@ export const ETFDetailModal: React.FC<ETFDetailModalProps> = ({
           </div>
         </div>
 
+        <IllustrativeDataNotice detail="This detail modal uses a bundled demo profile; displayed prices, distributions, holdings, ratings, NAV-health scores, and returns are examples, not provider-verified fund facts. Open Live ETF Research for a source-stamped dossier." className="mx-4 mt-3" />
+
         {/* Highlight Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-4 bg-slate-950/60 border-b border-slate-800 text-xs font-mono">
           <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-            <span className="text-slate-400 block text-[10px]">Current Price</span>
+            <span className="text-slate-400 block text-[10px]">Example price</span>
             <span className="text-base font-bold text-white">${etf.price.toFixed(2)}</span>
             <span className={`text-[10px] block ${etf.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               {etf.change24h >= 0 ? `+${etf.change24h}%` : `${etf.change24h}%`} today
@@ -108,19 +111,19 @@ export const ETFDetailModal: React.FC<ETFDetailModalProps> = ({
           </div>
 
           <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-            <span className="text-slate-400 block text-[10px]">Dividend Yield</span>
+            <span className="text-slate-400 block text-[10px]">Example yield</span>
             <span className="text-base font-bold text-emerald-400">{etf.dividendYield.toFixed(2)}%</span>
             <span className="text-[10px] text-slate-400 block">Frequency: {etf.distributionFrequency}</span>
           </div>
 
           <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-            <span className="text-slate-400 block text-[10px]">Next Ex-Dividend Date</span>
+            <span className="text-slate-400 block text-[10px]">Example ex-dividend date</span>
             <span className="text-sm font-bold text-cyan-300 mt-0.5 block">{etf.exDividendDate}</span>
-            <span className="text-[10px] text-slate-400 block">Pay Date: {etf.payDate}</span>
+            <span className="text-[10px] text-slate-400 block">Example pay date: {etf.payDate}</span>
           </div>
 
           <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-            <span className="text-slate-400 block text-[10px]">NAV Health Rating</span>
+            <span className="text-slate-400 block text-[10px]">Example NAV score</span>
             <div className="flex items-center gap-1.5 mt-0.5">
               {etf.navHealth === 'Prudent / Minimal Erosion' ? (
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -222,10 +225,10 @@ export const ETFDetailModal: React.FC<ETFDetailModalProps> = ({
                     </h4>
                     <p className="text-xs text-slate-300 mt-1 leading-relaxed">
                       {etf.navHealth === 'Prudent / Minimal Erosion'
-                        ? 'This fund does not employ aggressive destructive call selling. Principal capital compounds healthily with virtually zero structural decay.'
+                        ? 'Demo description: this bundled profile represents a broad-market fund. The NAV-health label and score are illustrative, not a measured assessment of the live fund.'
                         : etf.navHealth === 'Moderate / Yield Offset'
-                        ? 'This fund captures strong yield through OTM covered calls. Price appreciation is partially constrained during sharp bull runs, but NAV remains stable.'
-                        : 'CRITICAL EROSION WARNING: This fund pays high distribution yields by sacrificing upside and exposing 100% downside. Over multi-year horizons, nominal price steadily drops.'}
+                        ? 'Demo description: this bundled profile models covered-call income with potentially capped upside. Actual NAV and total return depend on the fund, market path, and distributions.'
+                        : 'Illustrative erosion warning: this demo scenario pairs a high distribution yield with reduced upside participation and full market downside. Verify live NAV and total-return history; distribution yield alone does not indicate return.'}
                     </p>
                   </div>
                 </div>

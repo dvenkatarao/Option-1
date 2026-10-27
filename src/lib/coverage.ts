@@ -62,8 +62,9 @@ export async function computeCoverage() {
     field("vol3y", "3Y volatility computed", "Risk", (r) => finite(r.metrics?.vol3y)),
     field("dd3y", "3Y max drawdown computed", "Risk", (r) => finite(r.metrics?.maxDrawdown3y)),
     field("yield", "TTM yield computed", "Income", (r) => finite(r.metrics?.dividends.ttmYield)),
-    field("hist5", "5+ years of daily history", "History", (r) => (histMap.get(r.ticker)?.bars ?? 0) >= 1200),
+    field("hist5", "~5 years of daily history (1,200+ bars)", "History", (r) => (histMap.get(r.ticker)?.bars ?? 0) >= 1200, "Approximation only: similarity calculations separately require five calendar years of common history and at least 60 paired returns."),
     field("hist10", "9+ years of daily history", "History", (r) => (histMap.get(r.ticker)?.bars ?? 0) >= 2250),
+    field("hist200", "200+ daily closes", "History", (r) => (histMap.get(r.ticker)?.bars ?? 0) >= 200, "Minimum stored split-adjusted daily closes for the 50/200-day ETF trend state."),
   ];
 
   // Live quote fields (not stored today). Bid/ask are frequently 0 outside market hours.
@@ -104,12 +105,13 @@ export async function computeCoverage() {
     R("Fund quality grade", "Trading spread (stored history)", spreadPct, `Funds with at least ${snap.minSamples} samples over ${snap.minDays} days; ${snap.samples} samples stored so far. Until then liquidity uses volume only.`),
     { feature: "Fund quality grade", component: "NAV premium/discount", pct: p("navSane"), status: "info only", basis: "Shown on ETF pages for information only and NOT used in the grade: Yahoo NAV is usually the prior day's value, so the gap is mostly one day of price movement." },
     R("Fund quality grade", "Distribution history / NAV erosion", p("yield"), "Computed from price + dividend history"),
-    R("Equivalent funds & overlap", "Return-correlation grouping", p("hist5"), "Needs 5+ years of daily history"),
-    R("Equivalent funds & overlap", "Holdings overlap (lower bound)", p("holdingW"), "Top-10 holdings with weights"),
-    R("Guided advisor", "Fund category", p("category"), "Used to map funds to portfolio slices"),
-    R("Guided advisor", "Asset-class split", p("alloc"), "Reported stock/bond/cash allocation"),
-    R("Guided advisor", "Cost + size for picking core funds", Math.min(p("expense") ?? 0, p("aum") ?? 0), "Lower of expense-ratio and AUM coverage"),
-    R("Technical signals (later)", "Long daily history", p("hist10"), "9+ years of closes"),
+    R("Similar ETF groups", "Five-year return correlation", p("hist5"), "The calculation requires five calendar years of common history plus 60 paired daily returns; this field is an approximate bar-count coverage indicator."),
+    R("Similar ETF groups", "Top-10 holdings overlap (lower bound)", p("holdingW"), "Requires at least five weighted holdings in each fund; provider lists are partial."),
+    R("Guided ETF advisor", "Fund category", p("category"), "Used to map funds to portfolio slices"),
+    R("Guided ETF advisor", "Asset-class split", p("alloc"), "Reported stock/bond/cash allocation"),
+    R("Guided ETF advisor", "Cost + size for picking core funds", Math.min(p("expense") ?? 0, p("aum") ?? 0), "Lower of expense-ratio and AUM coverage"),
+    R("ETF trend signals", "Stored-history 50/200-day SMA + RSI14", p("hist200"), "Requires 200 valid split-adjusted daily closes; descriptive context, not a forecast."),
+    { feature: "ETF recommendation scores", component: "Holdings-weighted analyst consensus", pct: null, status: "unknown", basis: "Loaded on demand only. Each fund's recommendation score is included only when stock recommendation data covers at least 50% of its reported top-holdings weight; actual coverage is returned with the ranking." },
   ];
 
   // Coverage by asset class so gaps (e.g. bond funds without holdings) are visible.
