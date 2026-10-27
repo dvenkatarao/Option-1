@@ -4,7 +4,8 @@ import { etfHistory, etfs, type EtfProfileJson, type HistoryJson } from "@/db/sc
 import { cached, cachedOrNull } from "./cache";
 import { mapLimit } from "./http";
 import { computeMetrics } from "./metrics";
-import { UNIVERSE, isValidTicker } from "./universe";
+import { isValidTicker } from "./universe";
+import { getEffectiveEtfUniverse } from "./etf-universe-discovery";
 import { raw, yahooChart, yahooQuoteSummary, yahooQuotes, type YahooQuote } from "./yahoo";
 
 export const REFRESH_TTL_MS = 12 * 60 * 60 * 1000;
@@ -144,11 +145,14 @@ export async function getHistories(tickers: string[]): Promise<Record<string, Hi
   return Object.fromEntries(rows.map((r) => [r.ticker, r.data]));
 }
 
-/** Tickers in the universe that are missing or older than the TTL. */
+/** Tickers in the active universe that are missing or older than the TTL. */
 export async function staleTickers(extra: string[] = []): Promise<string[]> {
-  const rows = await db.select({ ticker: etfs.ticker, at: etfs.refreshedAt, hasMetrics: etfs.metrics, err: etfs.lastError }).from(etfs);
-  // Seed universe + any ETF a user looked up that stored successfully (so ad-hoc tickers stay fresh too)
-  const all = Array.from(new Set([...UNIVERSE, ...extra, ...rows.filter((r) => r.hasMetrics).map((r) => r.ticker)]));
+  const [rows, universe] = await Promise.all([
+    db.select({ ticker: etfs.ticker, at: etfs.refreshedAt, hasMetrics: etfs.metrics, err: etfs.lastError }).from(etfs),
+    getEffectiveEtfUniverse(),
+  ]);
+  // Active discovered universe + curated seed + any successfully looked-up ETF.
+  const all = Array.from(new Set([...universe.tickers, ...extra, ...rows.filter((r) => r.hasMetrics).map((r) => r.ticker)]));
   const map = new Map(rows.map((r) => [r.ticker, r]));
   const now = Date.now();
   return all.filter((t) => {
@@ -156,14 +160,14 @@ export async function staleTickers(extra: string[] = []): Promise<string[]> {
     if (!r) return true;
     if (!r.at) return true;
     const age = now - r.at.getTime();
-    // Failed tickers are retried after 6h rather than hammered every request
+    // Failed tickers without good data are retried after 6h rather than hammered every request
     if (r.err && !r.hasMetrics) return age > 6 * 60 * 60 * 1000;
     return age > REFRESH_TTL_MS;
   });
 }
 
 export async function refreshBatch(limit = 8, concurrency = 4) {
-  const todo = await staleTickers();
+  const [todo, universe] = await Promise.all([staleTickers(), getEffectiveEtfUniverse()]);
   const batch = todo.slice(0, limit);
   const results = await mapLimit(batch, concurrency, async (t) => {
     try {
@@ -174,7 +178,7 @@ export async function refreshBatch(limit = 8, concurrency = 4) {
     }
   });
   const remaining = Math.max(0, todo.length - batch.length);
-  return { processed: results, remaining, total: Math.max(UNIVERSE.length, todo.length) };
+  return { processed: results, remaining, total: universe.status.totalCount };
 }
 
 /** Live (delayed) quotes, cached 60s, stale-on-error. Returns map by symbol. */

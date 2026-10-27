@@ -2,7 +2,7 @@ import { handle } from "@/lib/api";
 import { toScreenRow, getRiskFree } from "@/lib/data";
 import { getAllEtfs, getQuotes, staleTickers } from "@/lib/etf-service";
 import { getSpreadStats } from "@/lib/snapshots";
-import { UNIVERSE } from "@/lib/universe";
+import { getEffectiveEtfUniverse } from "@/lib/etf-universe-discovery";
 
 export const dynamic = "force-dynamic";
 
@@ -10,11 +10,12 @@ export const dynamic = "force-dynamic";
 export const GET = handle(async (req: Request) => {
   const url = new URL(req.url);
   const query = (url.searchParams.get("q") ?? "").trim().toLowerCase();
-  const [funds, pending, riskFree, spreads] = await Promise.all([
+  const [funds, pending, riskFree, spreads, universe] = await Promise.all([
     getAllEtfs(),
     staleTickers(),
     getRiskFree(),
     getSpreadStats(),
+    getEffectiveEtfUniverse(),
   ]);
   const quotes = funds.length ? await getQuotes(funds.map((fund) => fund.ticker)) : { quotes: new Map(), fetchedAt: null, stale: false };
   const rows = funds
@@ -25,7 +26,8 @@ export const GET = handle(async (req: Request) => {
     rows,
     count: rows.length,
     hydrated: funds.length,
-    totalUniverse: UNIVERSE.length,
+    totalUniverse: universe.status.totalCount,
+    universe: universe.status,
     remaining: pending.length,
     refreshedAt: quotes.fetchedAt,
     stale: quotes.stale,

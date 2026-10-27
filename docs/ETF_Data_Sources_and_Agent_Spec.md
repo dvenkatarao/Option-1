@@ -24,7 +24,7 @@
 
 | Domain | Primary (free) | Fallback / cross-check | Gap / note |
 |---|---|---|---|
-| Universe & identifiers | SEC `company_tickers_exchange.json` + `company_tickers_mf.json` | OpenFIGI (ticker↔FIGI/ISIN/CUSIP) | Neither SEC file flags ETFs; use price-vendor `instrumentType = ETF` (Yahoo) or Polygon/Massive `type=ETF` |
+| Universe & identifiers | Massive/Polygon reference tickers with `market=stocks`, `locale=us`, `active=true`, `type=ETF` | Curated seed tickers; SEC ticker/CIK maps for identity crosswalk only | SEC maps do not flag ETFs. Vendor `ETN` type is classified separately and excluded; mutual funds are excluded; leveraged/inverse ETFs remain classified by the existing risk rules |
 | Daily prices, adjusted close, dividends | Yahoo chart API (unofficial) | Tiingo (50 req/h, 1000/day, 500 symbols/mo), Polygon/Massive (5/min, 2y), Alpha Vantage (25/day), Alpaca IEX | Prefer a licensed vendor for production |
 | Live / delayed quote | Yahoo v7 batch quote (delayed) | Finnhub /quote (60/min), Alpaca IEX | Real-time consolidated feed is paid |
 | Expense ratio, category, AUM, yield, inception | Yahoo quoteSummary | Alpha Vantage ETF_PROFILE; SEC risk/return data sets; sponsor site | Cross-check fees across ≥2 sources |
@@ -42,6 +42,16 @@
 | Market / ETF news | Yahoo headline RSS (links only) | Finnhub news (key), Marketaux (100 req/day, 3 articles each), GDELT (1 req / 5 s) | NewsAPI.org dev plan is non-production |
 | Volatility / sentiment | FRED VIXCLS; Cboe delayed JSON | - | - |
 | Positioning | CFTC COT (Socrata) | - | - |
+
+### ETF universe boundary and discovery rules
+
+- The runtime universe is the union of the curated seed list and active U.S.-listed stock instruments returned by Massive/Polygon with `market=stocks`, `locale=us`, `active=true`, and the explicit provider classification `type=ETF`. No additional liquidity cutoff is applied.
+- ETNs and mutual funds are not ETF candidates: provider type `ETN` is classified separately from `ETF`, and only exact `ETF` types enter the universe. SEC ticker/CIK maps may support identity crosswalks, but are not used to determine whether an instrument is an ETF.
+- Leveraged and inverse ETFs stay in the discovered universe and are tagged by the existing name/category risk rules; they are not silently presented as ordinary unleveraged funds. Downstream risk and recommendation behavior remains unchanged.
+- Without `POLYGON_API_KEY`, the app uses its curated seed list (and a previously cached discovery snapshot, if present). It does not infer ETF status from ticker text.
+- Successful full listings are stored in the existing Postgres-backed cache for 24 hours and served stale on provider errors. Background discovery retries after a 6-hour provider-failure backoff. Pagination is limited to 1,000 rows per request and eight pages, with at least 12.5 seconds between page requests; an incomplete listing is never published as a full snapshot.
+- In production, discovery and hydration start automatically when `POLYGON_API_KEY` is set. The listing cache is refreshed daily; a separate background job hydrates at most 8 stale tickers every 15 minutes with 4 concurrent workers. `ETF_UNIVERSE_DISCOVERY=false` disables it; set it to `true` to enable the job outside production. Manual discovery only updates the ticker catalog and does not hydrate all symbols.
+- Screener hydration remains on the existing Yahoo adapter. The UI batch is 8 tickers, the refresh API is capped at 16, and all batches retain bounded concurrency.
 
 ---
 
@@ -91,7 +101,7 @@ Inputs: daily series `close` (split-adjusted) and `adjclose` (split + distributi
 - **Stack:** Next.js (App Router) + PostgreSQL + Drizzle ORM. Server-side data adapters; no provider calls from the browser.
 - **Adapters:** one module per provider implementing the same interface (`getHistory`, `getProfile`, `getQuote`, `getHoldings`) so providers can be swapped.
 - **Tables:** `etfs` (profile + computed metrics + per-field source map), `etf_history` (compact daily series), `etf_distributions`, `etf_holdings_snapshots`, `macro_series`, `news_items`, `calendar_events`, `cache_entries`, `provider_health`.
-- **Jobs:** refresh universe every 12 h (prices/profile), quotes every 60 s (cached), macro hourly, news 10 min, FOMC/BLS calendars 6 h, N-PORT quarterly, EDGAR earnings 15 min.
+- **Jobs:** refresh the Massive/Polygon ETF listing daily when `POLYGON_API_KEY` is configured; hydrate at most 8 stale ETFs per 15-minute background cycle with 4 concurrent workers. Quotes every 60 s (cached), macro hourly, news 10 min, FOMC/BLS calendars 6 h, N-PORT quarterly, EDGAR earnings 15 min.
 - **Resilience:** stale-on-error cache, per-provider concurrency and rate limit tokens, exponential back-off on 429/5xx, health page that pings every source.
 - **Pages:** dashboard, screener (filter/sort), ETF detail (performance, risk, distributions, NAV erosion, holdings, analyst consensus, news), compare (growth chart, side-by-side, correlation), recommendations (goal-based rule scoring), macro (yield curve + indicators), news & events (FOMC, releases, earnings, announcements), sources/health.
 
@@ -108,7 +118,7 @@ Inputs: daily series `close` (split-adjusted) and `adjclose` (split + distributi
 
 ## 8. Environment variables
 
-`DATABASE_URL` (required) · `SEC_USER_AGENT` (set to "YourApp you@domain.com") · optional keys: `FRED_API_KEY`, `FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `TIINGO_API_KEY`, `POLYGON_API_KEY`, `FMP_API_KEY`, `TWELVEDATA_API_KEY`, `BEA_API_KEY`, `BLS_API_KEY`, `EIA_API_KEY`, `CENSUS_API_KEY`, `MARKETAUX_API_KEY`, `OPENFIGI_API_KEY`.
+`DATABASE_URL` (required) · `SEC_USER_AGENT` (set to "YourApp you@domain.com") · optional keys: `FRED_API_KEY`, `FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `TIINGO_API_KEY`, `POLYGON_API_KEY`, `FMP_API_KEY`, `TWELVEDATA_API_KEY`, `BEA_API_KEY`, `BLS_API_KEY`, `EIA_API_KEY`, `CENSUS_API_KEY`, `MARKETAUX_API_KEY`, `OPENFIGI_API_KEY`. `ETF_UNIVERSE_DISCOVERY=false` disables automatic ETF discovery/hydration; with a key set it defaults on in production. Set `ETF_UNIVERSE_DISCOVERY=true` to enable it in development.
 
 ---
 
@@ -235,12 +245,14 @@ Legend: **VERIFIED LIVE** = called from a live environment on 2026-10-17 and ret
 - **Free limits:** Basic: 5 API calls/min, end-of-day data, 2 years history, reference data, corporate actions (massive.com pricing/KB).
 - **Verification (2026-10-17):** VERIFIED IN OFFICIAL DOCS (key required, not called) - Unauthenticated call returned 401 'API Key was not provided' on 2026-10-17. Rebrand to Massive and limits per massive.com.
 - **Provides:**
-  - Ticker reference (type=ETF), EOD aggregates, dividends & splits, technical indicators
+  - Active U.S.-listed ETF discovery using the explicit ticker reference `type=ETF`; ETF/ETN/mutual-fund classification is not inferred from ticker maps
+  - EOD aggregates, dividends & splits, technical indicators
 - **Endpoints:**
-  - `GET /v3/reference/tickers?type=ETF&limit=1000&apiKey=KEY`
+  - `GET /v3/reference/tickers?market=stocks&locale=us&type=ETF&active=true&limit=1000&apiKey=KEY`
   - `GET /v2/aggs/ticker/SPY/range/1/day/{from}/{to}?apiKey=KEY`
 - **Caveats:**
   - Only 2 years of history on free; real-time/delayed snapshots are paid.
+  - Reference listing is paginated and rate-limited; discovery waits at least 12.5 seconds between pages and waits 60 seconds before one 429 retry, stops after 8 pages, and never stores an incomplete listing. It only adds tickers to the bounded Yahoo hydration queue.
 
 #### Alpaca Market Data
 - **Provider:** Alpaca Markets
@@ -299,7 +311,7 @@ Legend: **VERIFIED LIVE** = called from a live environment on 2026-10-17 and ret
 - **Docs:** https://www.sec.gov/search-filings/edgar-application-programming-interfaces
 - **Auth:** None
 - **Free limits:** Static JSON files; same 10 req/s fair-access rule.
-- **Verification (2026-10-17):** VERIFIED LIVE (called, valid data returned) - Both files returned valid JSON on 2026-10-17 (≈0.5 MB and ≈1.2 MB). Neither flags 'is ETF' - get that flag from your price provider (Yahoo instrumentType = ETF).
+- **Verification (2026-10-17):** VERIFIED LIVE (called, valid data returned) - Both files returned valid JSON on 2026-10-17 (≈0.5 MB and ≈1.2 MB). Neither flags 'is ETF' - use an explicit price-vendor type (Massive/Polygon `type=ETF` or Yahoo `instrumentType=ETF`) for classification.
 - **Provides:**
   - company_tickers_exchange.json: cik, name, ticker, exchange for listed issuers
   - company_tickers_mf.json: cik, seriesId, classId, symbol for mutual-fund and ETF share classes
@@ -307,7 +319,7 @@ Legend: **VERIFIED LIVE** = called from a live environment on 2026-10-17 and ret
   - `GET /files/company_tickers_exchange.json`
   - `GET /files/company_tickers_mf.json`
 - **Caveats:**
-  - Use to seed the universe and map symbols to CIK/series IDs, then join to N-PORT / prospectus datasets.
+  - Use for SEC CIK/series identity crosswalks and joins to N-PORT / prospectus datasets; do not use these maps alone to classify ETF candidates.
 
 #### SEC Form N-PORT data sets (monthly fund holdings)
 - **Provider:** SEC

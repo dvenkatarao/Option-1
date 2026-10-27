@@ -4,7 +4,7 @@ import { etfHistory, etfs } from "@/db/schema";
 import { getQuotes } from "./etf-service";
 import { getSnapshotSummary, getSpreadStats } from "./snapshots";
 import { assetClassOf } from "./recommend";
-import { UNIVERSE } from "./universe";
+import { getEffectiveEtfUniverse } from "./etf-universe-discovery";
 
 /**
  * Data coverage audit: how many ETFs actually have each field populated, using the real database and
@@ -18,7 +18,7 @@ const pctOf = (have: number, total: number) => (total > 0 ? have / total : null)
 const status = (p: number | null): Readiness["status"] => (p == null ? "unknown" : p >= 0.9 ? "ready" : p >= 0.6 ? "partial" : "not ready");
 
 export async function computeCoverage() {
-  const rows = await db.select().from(etfs);
+  const [rows, universe] = await Promise.all([db.select().from(etfs), getEffectiveEtfUniverse()]);
   const hist = await db
     .select({
       ticker: etfHistory.ticker,
@@ -132,7 +132,8 @@ export async function computeCoverage() {
 
   return {
     generatedAt: new Date().toISOString(),
-    universeSize: UNIVERSE.length,
+    universeSize: universe.status.totalCount,
+    universe: universe.status,
     inDatabase: rows.length,
     hydrated: N,
     failed: failed.map((r) => ({ ticker: r.ticker, error: r.lastError })),

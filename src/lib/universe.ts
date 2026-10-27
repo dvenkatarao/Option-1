@@ -4,9 +4,9 @@
  * from providers and cached; a ticker that fails to resolve is recorded with its
  * error and shown as unavailable instead of being guessed.
  *
- * Production note: replace/extend this with the full SEC universe
- * (company_tickers_exchange.json + company_tickers_mf.json filtered by an ETF flag
- * from your price provider) - see the data-source spec.
+ * At runtime this curated seed is unioned with the active U.S.-listed ETF listing
+ * from Massive/Polygon (`market=stocks`, `locale=us`, `active=true`, `type=ETF`).
+ * SEC ticker maps are useful for identity crosswalks but do not classify ETFs.
  */
 export const UNIVERSE: string[] = [
   // Broad market
@@ -26,7 +26,7 @@ export const UNIVERSE: string[] = [
   "VEA", "VWO", "IEFA", "IEMG", "EFA", "EEM", "VXUS", "VEU", "EWJ", "FXI", "INDA", "EWZ",
   // Commodities, crypto & alternatives
   "GLD", "IAU", "SLV", "USO", "DBC", "GDX", "IBIT", "BITO",
-  // Leveraged (flagged and excluded from recommendations by default)
+  // Leveraged / inverse (retained in the universe and explicitly flagged by the risk rules)
   "TQQQ", "SQQQ", "SPXL", "UPRO", "SOXL",
 ];
 

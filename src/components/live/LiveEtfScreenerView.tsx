@@ -2,11 +2,25 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, AlertTriangle, ChevronDown, Database, ExternalLink, RefreshCw, Search, ShieldCheck, X } from "lucide-react";
 import type { ScreenRow } from "../../types/liveScreener";
 
+type EtfUniverseStatus = {
+  configured: boolean;
+  automatic: boolean;
+  provider: "Polygon/Massive" | "Curated seed list";
+  classification: string;
+  discoveredCount: number;
+  curatedCount: number;
+  totalCount: number;
+  fetchedAt: string | null;
+  stale: boolean;
+  pageCount: number | null;
+};
+
 type ScreenerResponse = {
   rows: ScreenRow[];
   count: number;
   hydrated: number;
   totalUniverse: number;
+  universe: EtfUniverseStatus;
   remaining: number;
   refreshedAt: string | null;
   stale: boolean;
@@ -205,7 +219,9 @@ export function LiveEtfScreenerView() {
   const [data, setData] = useState<ScreenerResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
@@ -244,6 +260,21 @@ export function LiveEtfScreenerView() {
     }
   };
 
+  const discover = async () => {
+    setDiscovering(true);
+    setMessage(null);
+    setDiscoveryError(null);
+    try {
+      const result = await requestJson<{ universe: EtfUniverseStatus; stale: boolean; message: string }>("/api/etfs/discover", { method: "POST" });
+      setMessage(`${result.message} ${result.universe.discoveredCount.toLocaleString()} active U.S.-listed ETFs are in the discovery snapshot; hydration remains batch-limited.`);
+      await load();
+    } catch (e) {
+      setDiscoveryError(e instanceof Error ? e.message : "ETF universe discovery failed");
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
   const filteredRows = data?.rows ?? [];
 
   return (
@@ -256,8 +287,9 @@ export function LiveEtfScreenerView() {
             <p className="mt-1 text-xs leading-relaxed text-slate-400">10-year price and distribution history, deterministic return/risk metrics, fund quality grading, and delayed quotes. Missing values stay N/A; stored values show their refresh date.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => void load()} disabled={loading || refreshing} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/50 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button>
-            <button onClick={() => void refresh()} disabled={refreshing} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />{refreshing ? "Refreshing…" : "Hydrate next 8"}</button>
+            <button onClick={() => void load()} disabled={loading || refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/50 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button>
+            <button onClick={() => void discover()} disabled={discovering || refreshing || !data?.universe.configured} title={!data?.universe.configured ? "Configure POLYGON_API_KEY on the server to discover the full universe" : "Refresh the active U.S.-listed ETF ticker catalog; this does not hydrate prices or profiles"} className="inline-flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:border-cyan-400/60 hover:text-white disabled:opacity-50"><Database className={`h-3.5 w-3.5 ${discovering ? "animate-pulse" : ""}`} />{discovering ? "Discovering…" : "Discover universe"}</button>
+            <button onClick={() => void refresh()} disabled={refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />{refreshing ? "Refreshing…" : "Hydrate next 8"}</button>
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -266,10 +298,16 @@ export function LiveEtfScreenerView() {
           <Metric label="Pending" value={data ? `${data.remaining}` : "—"} />
           <Metric label="Risk-free proxy" value={pct(data?.riskFreeRate ?? null)} hint={data?.riskFreeDate ?? "FRED DGS3MO"} />
         </div>
+        {data && <div className="mt-3 space-y-1 border-t border-slate-800 pt-3 text-[10px] leading-relaxed text-slate-400">
+          <p><span className="font-semibold text-slate-300">Discovery:</span> {data.universe.provider} · {data.universe.discoveredCount.toLocaleString()} provider-classified ETFs · {data.universe.stale ? "snapshot stale" : data.universe.fetchedAt ? `snapshot as of ${stamp(data.universe.fetchedAt)}` : "no provider snapshot yet"}.</p>
+          <p>{data.universe.configured ? "POLYGON_API_KEY is configured." : data.universe.discoveredCount ? "POLYGON_API_KEY is not configured; using the last saved provider snapshot plus curated seeds." : "POLYGON_API_KEY is not configured; the screener uses its curated seed list."} {data.universe.automatic ? "Automatic discovery and bounded background hydration are enabled." : "Automatic background discovery is off; use the controls to discover and hydrate manually."}</p>
+          <p>{data.universe.classification} Hydration is limited to 8 ETFs per batch with 4 concurrent workers; full discovery only adds symbols to the queue.</p>
+        </div>}
         <div className="mt-3 text-[10px] text-slate-500">Quote cache {stamp(data?.refreshedAt)}{data?.stale ? " · stale-on-error copy" : ""} · Yahoo Finance delayed feed is unofficial.</div>
       </section>
 
       {message && <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200">{message}</div>}
+      {discoveryError && <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{discoveryError}</span></div>}
       {error && <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}. For persistent data, configure PostgreSQL with DATABASE_URL and run <code className="rounded bg-slate-950 px-1 py-0.5">npm run db:migrate</code> (or use the included Docker Compose setup).</span></div>}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -284,7 +322,7 @@ export function LiveEtfScreenerView() {
             <tbody className="divide-y divide-slate-800/80">
               {loading && !data ? <tr><td colSpan={12} className="px-4 py-12 text-center text-slate-400">Loading source-backed screener…</td></tr> : filteredRows.map((row) => (
                 <tr key={row.ticker} className="transition hover:bg-slate-800/50">
-                  <td className="px-3 py-2.5"><button onClick={() => setSelectedTicker(row.ticker)} className="text-left"><span className="font-mono font-bold text-emerald-300 hover:text-emerald-200">{row.ticker}</span><span className="mt-0.5 block max-w-56 truncate text-[10px] text-slate-500">{row.name ?? "Fund name unavailable"}</span></button></td>
+                  <td className="px-3 py-2.5"><button onClick={() => setSelectedTicker(row.ticker)} className="text-left"><span className="flex items-center gap-1.5"><span className="font-mono font-bold text-emerald-300 hover:text-emerald-200">{row.ticker}</span>{row.leveraged && <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-300">Leveraged / inverse</span>}</span><span className="mt-0.5 block max-w-56 truncate text-[10px] text-slate-500">{row.name ?? "Fund name unavailable"}</span></button></td>
                   <td className="max-w-44 truncate px-3 py-2.5 text-slate-400">{row.category ?? "N/A"}</td>
                   <td className="px-3 py-2.5">{row.quality ? <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-mono font-bold text-emerald-300">{row.quality}{row.qualityScore != null ? ` · ${row.qualityScore.toFixed(0)}` : ""}</span> : <span className="text-slate-500">N/A</span>}</td>
                   <td className="px-3 py-2.5 font-mono text-slate-200">{money(row.price)}</td>
