@@ -6,4 +6,6 @@ export async function register() {
   startQuoteSnapshotter();
   const { startWheelScanner } = await import("./lib/wheel-service");
   startWheelScanner();
+  const { startEtfUniverseJob } = await import("./lib/etf-universe-job");
+  startEtfUniverseJob();
 }

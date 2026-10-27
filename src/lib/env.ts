@@ -35,6 +35,8 @@ const envSchema = z.object({
   FINNHUB_API_KEY: optionalString,
   ALPHAVANTAGE_API_KEY: optionalString,
   POLYGON_API_KEY: optionalString,
+  /** Automatic daily ETF universe discovery + bounded hydration; defaults on in production when POLYGON_API_KEY is set. */
+  ETF_UNIVERSE_DISCOVERY: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).optional()),
   /** Alpaca market-data + trading keys (free account). When both are set Alpaca is the primary option-chain source. */
   ALPACA_API_KEY: optionalString,
   ALPACA_SECRET_KEY: optionalString,
