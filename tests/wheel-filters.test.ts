@@ -7,6 +7,8 @@ describe("parseFilters", () => {
     const f = parseFilters({});
     expect(f.params).toEqual(DEFAULT_PARAMS);
     expect(f.minGrade).toBe("A");
+    expect(f.gradeMatch).toBe("minimum");
+    expect(f.sortBy).toBe("score");
     expect(f.account).toBe("all");
     expect(f.trendOnly).toBe(false);
     expect(f.params.allowEarnings).toBe(false);
@@ -17,6 +19,15 @@ describe("parseFilters", () => {
     expect(f.trendOnly).toBe(true);
     expect(f.minGrade).toBe("A+");
     expect(f.account).toBe("R");
+  });
+  it("supports exact grade matching and annualized-return ranking in shareable filters", () => {
+    const f = parseFilters({ preset: "B", gradeMatch: "exact", sortBy: "annRoc" });
+    expect(f.minGrade).toBe("B");
+    expect(f.gradeMatch).toBe("exact");
+    expect(f.sortBy).toBe("annRoc");
+    const roundTrip = parseFilters(Object.fromEntries(new URLSearchParams(filtersQuery(f))));
+    expect(roundTrip.gradeMatch).toBe("exact");
+    expect(roundTrip.sortBy).toBe("annRoc");
   });
   it("converts percent inputs to fractions and clamps junk", () => {
     const f = parseFilters({ spread: "5", ret: "12", dMin: "abc", dteMax: "9999", oi: "-4" });

@@ -21,10 +21,19 @@ export type OptionContract = {
   delta: number | null;
   /** "provider" = delta supplied by the data feed; "model" = Black-Scholes from implied volatility. */
   deltaSource: "provider" | "model" | null;
+  /** Provider/model provenance for the complete Greek set; "mixed" when both were used. */
+  greeksSource?: "provider" | "model" | "mixed" | null;
+  gamma?: number | null;
+  /** Theta is per calendar day; vega/rho are per 1 percentage point; see greeksSource. */
+  theta?: number | null;
+  vega?: number | null;
+  rho?: number | null;
   /** Implied volatility as a fraction (0.30 = 30%). */
   iv: number | null;
   oi: number | null;
   volume: number | null;
+  /** Provider quote timestamp when included in the payload (not the fetch time). */
+  quoteTimestamp?: string | null;
   source: "alpaca" | "yahoo";
 };
 

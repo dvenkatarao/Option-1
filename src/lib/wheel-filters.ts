@@ -1,6 +1,6 @@
 /** Query-string <-> filter mapping for the Wheel pages (a plain GET form, so every view is a shareable URL). */
 import { DEFAULT_PARAMS, type WheelParams } from "./wheel";
-import type { AccountFilter, WheelFilters } from "./wheel-service";
+import type { AccountFilter, GradeMatch, WheelFilters, WheelSort } from "./wheel-service";
 import { isPresetKey, STOCK_PRESETS, type MissingPolicy, type PresetKey } from "./stock-presets";
 import type { StockThresholds } from "./stock-presets";
 
@@ -93,12 +93,15 @@ export function parseFilters(sp: SP): WheelFilters {
   const optionableOnly = one(sp.opt) !== "0"; // default ON
   const missingPolicy: MissingPolicy = one(sp.miss) === "keep" ? "keep" : "exclude";
 
-  // Backward compat: minGrade used by old callers
-  const minGrade = (preset === "all" ? "C" : preset) as WheelFilters["minGrade"];
+  const minGrade = preset as WheelFilters["minGrade"];
+  const gradeMatch: GradeMatch = one(sp.gradeMatch) === "exact" ? "exact" : "minimum";
+  const sortBy: WheelSort = one(sp.sortBy) === "annRoc" ? "annRoc" : "score";
 
   return {
     params,
     minGrade,
+    gradeMatch,
+    sortBy,
     stockMode,
     stockPreset,
     stockThresholds,
@@ -124,6 +127,8 @@ export function filtersQuery(f: WheelFilters): string {
     ret: String(Math.round(p.minAnnReturn * 100)),
     minScore: String(f.minScore ?? 15),
   });
+  if (f.gradeMatch === "exact") q.set("gradeMatch", "exact");
+  if (f.sortBy === "annRoc") q.set("sortBy", "annRoc");
   // Stock filter (new)
   if (f.stockMode === "custom") {
     q.set("mode", "custom");

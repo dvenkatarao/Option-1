@@ -4,7 +4,7 @@
  * Alpaca: market data `snapshots` (quote, greeks, implied volatility) joined with trading `option_contracts` (open interest).
  * Yahoo:  v7/finance/options (quote, implied volatility, open interest; NO greeks - delta is modelled afterwards).
  */
-import { bsDelta } from "./bs";
+import { bsGreeks } from "./bs";
 import { daysBetween, type OptionContract, type OptionType } from "./wheel";
 
 const num = (x: unknown): number | null => {
@@ -20,10 +20,10 @@ export function parseOcc(sym: string): { underlying: string; expiration: string;
 }
 
 type AlpacaSnap = {
-  latestQuote?: { bp?: number; ap?: number };
+  latestQuote?: { bp?: number; ap?: number; t?: string };
   latestTrade?: { p?: number };
   dailyBar?: { v?: number };
-  greeks?: { delta?: number };
+  greeks?: { delta?: number; gamma?: number; theta?: number; vega?: number; rho?: number };
   impliedVolatility?: number;
 };
 type AlpacaContract = { symbol: string; expiration_date?: string; strike_price?: string | number; type?: string; open_interest?: string | number | null };
@@ -40,6 +40,13 @@ export function parseAlpaca(snapshots: Record<string, AlpacaSnap>, contracts: Al
     const type = (k.type === "put" || k.type === "call" ? k.type : occ?.type) ?? null;
     if (strike == null || !expiration || !type) continue;
     const delta = num(snap.greeks?.delta);
+    const greekValues = {
+      gamma: num(snap.greeks?.gamma),
+      theta: num(snap.greeks?.theta),
+      vega: num(snap.greeks?.vega),
+      rho: num(snap.greeks?.rho),
+    };
+    const hasGreeks = delta != null || Object.values(greekValues).some((value) => value != null);
     out.push({
       symbol: k.symbol,
       type,
@@ -50,9 +57,12 @@ export function parseAlpaca(snapshots: Record<string, AlpacaSnap>, contracts: Al
       last: num(snap.latestTrade?.p),
       delta,
       deltaSource: delta != null ? "provider" : null,
+      greeksSource: hasGreeks ? "provider" : null,
+      ...greekValues,
       iv: num(snap.impliedVolatility),
       oi: num(k.open_interest),
       volume: num(snap.dailyBar?.v),
+      quoteTimestamp: snap.latestQuote?.t ?? null,
       source: "alpaca",
     });
   }
@@ -115,15 +125,27 @@ export function parseYahooResult(json: unknown, type: OptionType): { expirations
 }
 
 /**
- * Fill in missing deltas with a Black-Scholes model from each contract's implied volatility.
- * Provider-supplied deltas are never overwritten. Contracts with neither stay null (and are rejected downstream).
+ * Fill missing Greeks with a European Black-Scholes model from each contract's IV.
+ * Provider values are never overwritten. Delta remains null when IV is unavailable.
  */
 export function addModelDeltas(contracts: OptionContract[], spot: number, rate: number, today: string, divYield = 0): OptionContract[] {
   return contracts.map((c) => {
-    if (c.delta != null || c.iv == null) return c;
+    if (c.iv == null) return c;
     const days = daysBetween(today, c.expiration);
-    const d = bsDelta({ type: c.type, spot, strike: c.strike, years: days / 365, iv: c.iv, rate, divYield });
-    return d == null ? c : { ...c, delta: d, deltaSource: "model" };
+    const model = bsGreeks({ type: c.type, spot, strike: c.strike, years: days / 365, iv: c.iv, rate, divYield });
+    if (!model) return c;
+    const usedProvider = c.deltaSource === "provider" || c.greeksSource === "provider";
+    const usedModel = c.delta == null || c.gamma == null || c.theta == null || c.vega == null || c.rho == null;
+    return {
+      ...c,
+      delta: c.delta ?? model.delta,
+      deltaSource: c.delta != null ? c.deltaSource : "model",
+      gamma: c.gamma ?? model.gamma,
+      theta: c.theta ?? model.theta,
+      vega: c.vega ?? model.vega,
+      rho: c.rho ?? model.rho,
+      greeksSource: usedProvider && usedModel ? "mixed" : usedProvider ? "provider" : "model",
+    };
   });
 }
 

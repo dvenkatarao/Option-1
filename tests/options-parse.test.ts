@@ -12,7 +12,7 @@ describe("parseOcc", () => {
 
 describe("parseAlpaca", () => {
   const snaps = {
-    AAPL261120P00200000: { latestQuote: { bp: 2.1, ap: 2.2 }, latestTrade: { p: 2.15 }, greeks: { delta: -0.21 }, impliedVolatility: 0.27, dailyBar: { v: 120 } },
+    AAPL261120P00200000: { latestQuote: { bp: 2.1, ap: 2.2, t: "2026-10-21T14:00:00Z" }, latestTrade: { p: 2.15 }, greeks: { delta: -0.21, gamma: 0.03, theta: -0.04, vega: 0.08, rho: -0.02 }, impliedVolatility: 0.27, dailyBar: { v: 120 } },
     AAPL261120P00190000: { latestQuote: { bp: 0.9, ap: 1.0 }, impliedVolatility: 0.29 }, // no greeks
   };
   const contracts = [
@@ -23,7 +23,7 @@ describe("parseAlpaca", () => {
   it("joins snapshots and contracts, keeps provider deltas, drops unmatched", () => {
     const r = parseAlpaca(snaps, contracts);
     expect(r).toHaveLength(2);
-    expect(r[0]).toMatchObject({ strike: 200, bid: 2.1, ask: 2.2, delta: -0.21, deltaSource: "provider", iv: 0.27, oi: 1500, volume: 120, source: "alpaca", type: "put" });
+    expect(r[0]).toMatchObject({ strike: 200, bid: 2.1, ask: 2.2, delta: -0.21, deltaSource: "provider", greeksSource: "provider", gamma: 0.03, theta: -0.04, vega: 0.08, rho: -0.02, quoteTimestamp: "2026-10-21T14:00:00Z", iv: 0.27, oi: 1500, volume: 120, source: "alpaca", type: "put" });
     expect(r[1].delta).toBeNull();
     expect(r[1].oi).toBe(400);
   });
@@ -68,8 +68,15 @@ describe("addModelDeltas", () => {
     expect(out[0].deltaSource).toBe("model");
     expect(out[0].delta!).toBeLessThan(0);
     expect(out[0].delta!).toBeGreaterThan(-0.3);
+    expect(out[0].greeksSource).toBe("model");
+    expect(out[0].gamma).toBeGreaterThan(0);
+    expect(out[0].theta).toBeLessThan(0);
+    expect(out[0].vega).toBeGreaterThan(0);
     expect(out[1].delta).toBe(-0.3);
+    expect(out[1].greeksSource).toBe("mixed");
+    expect(out[1].gamma).toBeGreaterThan(0);
     expect(out[2].delta).toBeNull();
+    expect(out[2].greeksSource).toBeUndefined();
   });
 });
 

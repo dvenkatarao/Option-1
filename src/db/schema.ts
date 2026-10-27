@@ -284,6 +284,41 @@ export const wheelIvHistory = pgTable(
   (t) => [index("wheel_iv_history_ticker_idx").on(t.ticker), index("wheel_iv_history_captured_idx").on(t.capturedAt)],
 );
 
+/** Timestamped provider/model option quote snapshots for contract-level history charts. */
+export const optionQuoteSnapshots = pgTable(
+  "option_quote_snapshots",
+  {
+    id: text("id").primaryKey(),
+    contractSymbol: text("contract_symbol").notNull(),
+    ticker: text("ticker").notNull(),
+    type: text("type").notNull(),
+    expiration: text("expiration").notNull(),
+    strike: doublePrecision("strike").notNull(),
+    bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
+    providerTimestamp: timestamp("provider_timestamp", { withTimezone: true }),
+    source: text("source").notNull(),
+    underlyingPrice: doublePrecision("underlying_price"),
+    bid: doublePrecision("bid"),
+    ask: doublePrecision("ask"),
+    last: doublePrecision("last"),
+    iv: doublePrecision("iv"),
+    delta: doublePrecision("delta"),
+    gamma: doublePrecision("gamma"),
+    theta: doublePrecision("theta"),
+    vega: doublePrecision("vega"),
+    rho: doublePrecision("rho"),
+    openInterest: doublePrecision("open_interest"),
+    volume: doublePrecision("volume"),
+  },
+  (t) => [
+    uniqueIndex("option_quote_snapshots_contract_bucket_idx").on(t.contractSymbol, t.bucket),
+    index("option_quote_snapshots_ticker_exp_idx").on(t.ticker, t.expiration),
+    index("option_quote_snapshots_captured_idx").on(t.capturedAt),
+  ],
+);
+
 /** Local wheel positions tracker (optional server persistence; UI also uses localStorage). */
 export const wheelPositions = pgTable("wheel_positions", {
   id: text("id").primaryKey(),
