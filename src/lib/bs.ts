@@ -8,9 +8,10 @@ export function normCdf(x: number): number {
 }
 
 export type BsInput = { type: "put" | "call"; spot: number; strike: number; years: number; iv: number; rate: number; divYield?: number };
+export type BsGreeks = { delta: number; gamma: number; theta: number; vega: number; rho: number };
 
 export function bsD1({ spot, strike, years, iv, rate, divYield = 0 }: BsInput): number | null {
-  if (!(spot > 0 && strike > 0 && years > 0 && iv > 0)) return null;
+  if (!(spot > 0 && strike > 0 && years > 0 && iv > 0) || ![spot, strike, years, iv, rate, divYield].every(Number.isFinite)) return null;
   return (Math.log(spot / strike) + (rate - divYield + (iv * iv) / 2) * years) / (iv * Math.sqrt(years));
 }
 
@@ -20,4 +21,34 @@ export function bsDelta(inp: BsInput): number | null {
   if (d1 == null) return null;
   const disc = Math.exp(-(inp.divYield ?? 0) * inp.years);
   return inp.type === "call" ? disc * normCdf(d1) : disc * (normCdf(d1) - 1);
+}
+
+/**
+ * Black-Scholes Greeks for a European option with continuous dividend yield.
+ * Gamma is per $1 underlying move; theta is per calendar day; vega/rho are
+ * per 1 percentage-point change in volatility/rates. These are model values,
+ * not provider quotes, and do not account for early exercise or discrete dividends.
+ */
+export function bsGreeks(inp: BsInput): BsGreeks | null {
+  const d1 = bsD1(inp);
+  if (d1 == null) return null;
+  const { spot, strike, years, iv, rate, type } = inp;
+  const q = inp.divYield ?? 0;
+  const rootT = Math.sqrt(years);
+  const d2 = d1 - iv * rootT;
+  const density = Math.exp(-0.5 * d1 * d1) / Math.sqrt(2 * Math.PI);
+  const discQ = Math.exp(-q * years);
+  const discR = Math.exp(-rate * years);
+  const delta = type === "call" ? discQ * normCdf(d1) : discQ * (normCdf(d1) - 1);
+  const gamma = (discQ * density) / (spot * iv * rootT);
+  const commonTheta = -(spot * discQ * density * iv) / (2 * rootT);
+  const theta = type === "call"
+    ? (commonTheta - rate * strike * discR * normCdf(d2) + q * spot * discQ * normCdf(d1)) / 365
+    : (commonTheta + rate * strike * discR * normCdf(-d2) - q * spot * discQ * normCdf(-d1)) / 365;
+  const vega = (spot * discQ * density * rootT) / 100;
+  const rho = type === "call"
+    ? (strike * years * discR * normCdf(d2)) / 100
+    : (-strike * years * discR * normCdf(-d2)) / 100;
+  const greeks = { delta, gamma, theta, vega, rho };
+  return Object.values(greeks).every(Number.isFinite) ? greeks : null;
 }

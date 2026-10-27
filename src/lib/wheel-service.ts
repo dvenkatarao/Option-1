@@ -10,6 +10,7 @@ import { yahooQuotes } from "./yahoo";
 import { DEFAULT_PARAMS, daysBetween, scanPuts, type OptionContract, type PutCandidate, type RejectReason, type StockCtx, type WheelParams } from "./wheel";
 import { generateId } from "./security";
 import { ivPercentile } from "./wheel-iv";
+import { recordOptionQuoteSnapshots } from "./option-snapshots";
 import { evaluateStockThresholds, STOCK_PRESETS, type MissingPolicy } from "./stock-presets";
 import type { PresetKey, StockThresholds } from "./stock-presets";
 import type { StockInputs } from "./stock-quality";
@@ -49,12 +50,15 @@ export function scanIsStale(scannedAt: Date | null | undefined, now = new Date()
   return now.getTime() - scannedAt.getTime() > (isUsMarketHours(now) ? SCAN_TTL_MARKET_MS : SCAN_TTL_CLOSED_MS);
 }
 
-async function scanOne(g: GradedStock, price: number | null) {
+async function scanOne(g: GradedStock, price: number | null, marketState?: string | null) {
   const ticker = g.row.ticker;
   const p = price ?? g.row.price;
   try {
     if (p == null) throw new Error("no price");
     const r = await getOptionChain({ symbol: ticker, type: "put", price: p, dteMin: SCAN_DTE_MIN, dteMax: SCAN_DTE_MAX, divYield: g.row.events?.dividendYield ?? 0 });
+    await recordOptionQuoteSnapshots({ ticker, underlyingPrice: p, contracts: r.contracts.slice(0, 120), fetchedAt: r.fetchedAt, stale: r.stale, marketState }).catch((e) => {
+      console.warn("[options] background quote snapshot skipped:", e instanceof Error ? e.message : e);
+    });
     const contracts = r.contracts.filter((c) => c.delta != null && Math.abs(c.delta) <= 0.5 && (c.bid ?? 0) > 0);
     const row = { ticker, scannedAt: new Date(), source: r.source, fallbackReason: r.fallbackReason, price: p, contracts, error: null };
     await db.insert(wheelScans).values(row).onConflictDoUpdate({ target: wheelScans.ticker, set: row });
@@ -124,17 +128,22 @@ export async function staleScanTickers(): Promise<GradedStock[]> {
   return elig.filter((g) => scanIsStale(at.get(g.row.ticker)));
 }
 
-/** Scan up to `limit` stale A/A+ stocks (live prices first, stored price as fallback). */
+/** Scan up to `limit` stale C+ stocks (live prices first, stored price as fallback). */
 export async function runScanBatch(limit: number, concurrency = 3) {
   const stale = await staleScanTickers();
   const batch = stale.slice(0, limit);
-  const prices = new Map<string, number>();
+  const quoteByTicker = new Map<string, { price: number | null; marketState: string | null }>();
   try {
-    for (const q of await yahooQuotes(batch.map((b) => b.row.ticker))) if (q.price != null) prices.set(q.symbol, q.price);
+    for (const quote of await yahooQuotes(batch.map((b) => b.row.ticker))) {
+      quoteByTicker.set(quote.symbol, { price: quote.price, marketState: quote.marketState ?? null });
+    }
   } catch {
     /* fall back to the stored daily close */
   }
-  const processed = await mapLimit(batch, concurrency, (g) => scanOne(g, prices.get(g.row.ticker) ?? null));
+  const processed = await mapLimit(batch, concurrency, (g) => {
+    const quote = quoteByTicker.get(g.row.ticker);
+    return scanOne(g, quote?.price ?? null, quote?.marketState ?? null);
+  });
   return { processed, remaining: Math.max(0, stale.length - batch.length) };
 }
 
@@ -143,9 +152,13 @@ export async function runScanBatch(limit: number, concurrency = 3) {
 /* ------------------------------------------------------------------ */
 
 export type AccountFilter = "all" | "R" | "T";
+export type GradeMatch = "minimum" | "exact";
+export type WheelSort = "score" | "annRoc";
 export type WheelFilters = {
   params: WheelParams;
   minGrade: "A+" | "A" | "B" | "C" | "all";
+  gradeMatch: GradeMatch;
+  sortBy: WheelSort;
   stockMode: "preset" | "custom";
   stockPreset: PresetKey;
   stockThresholds: StockThresholds;
@@ -156,9 +169,26 @@ export type WheelFilters = {
   minScore: number;
   divOnly: boolean;
 };
+
+export function matchesWheelGrade(grade: StockGrade | null, filter: WheelFilters["minGrade"], mode: GradeMatch): boolean {
+  if (grade == null) return false;
+  if (filter === "all") return true;
+  if (mode === "exact") return grade === filter;
+  // Minimum grade is inclusive: B includes B, A, and A+.
+  return stockGradeRank(grade) <= stockGradeRank(filter as StockGrade);
+}
+
+export function comparePutCandidates(a: Pick<PutCandidate, "annRoc" | "score">, b: Pick<PutCandidate, "annRoc" | "score">, sortBy: WheelSort): number {
+  return sortBy === "annRoc"
+    ? b.annRoc - a.annRoc || b.score - a.score
+    : b.score - a.score || b.annRoc - a.annRoc;
+}
+
 export const DEFAULT_FILTERS: WheelFilters = {
   params: DEFAULT_PARAMS,
   minGrade: "A",
+  gradeMatch: "minimum",
+  sortBy: "score",
   stockMode: "preset",
   stockPreset: "A",
   stockThresholds: STOCK_PRESETS["A"],
@@ -213,13 +243,7 @@ export async function getWheelResults(f: WheelFilters = DEFAULT_FILTERS, today =
       }
     }
   } else {
-    // Preset: inclusive grade filtering (B includes B,A,A+ etc)
-    if (f.minGrade === "all") {
-      eligible = graded.filter((g) => g.grade != null);
-    } else {
-      const minRank = stockGradeRank(f.minGrade as StockGrade);
-      eligible = graded.filter((g) => g.grade != null && stockGradeRank(g.grade as StockGrade) <= minRank);
-    }
+    eligible = graded.filter((g) => matchesWheelGrade(g.grade, f.minGrade, f.gradeMatch));
     // optionableOnly also applies in preset mode
     if (f.optionableOnly === false) {
       // no-op today, reserved
@@ -264,6 +288,7 @@ export async function getWheelResults(f: WheelFilters = DEFAULT_FILTERS, today =
       cands = cands.filter((c) => c.score >= f.minScore);
     }
     if (f.account !== "all") cands = cands.filter((c) => c.account.flag === f.account || c.account.flag === "R/T");
+    cands.sort((a, b) => comparePutCandidates(a, b, f.sortBy));
     if (cands.length === 0) {
       if (!f.params.allowEarnings && !scan.candidates.length && (scan.rejected.earnings ?? 0) > 0) {
         const without = scanPuts(s.contracts as OptionContract[], ctx, { ...f.params, allowEarnings: true }, today);
@@ -273,7 +298,7 @@ export async function getWheelResults(f: WheelFilters = DEFAULT_FILTERS, today =
     }
     rows.push({ g, ctx, best: cands[0], count: cands.length, source: s.source, fallbackReason: s.fallbackReason, scannedAt: s.scannedAt });
   }
-  rows.sort((a, b) => b.best.score - a.best.score);
+  rows.sort((a, b) => comparePutCandidates(a.best, b.best, f.sortBy));
   earningsWatch.sort((a, b) => a.days - b.days);
   const universe = stale.length;
   return {

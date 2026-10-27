@@ -109,12 +109,11 @@ export async function fetchOptionChain(req: ChainRequest): Promise<ChainResult> 
 
 /** Cached chain with model deltas filled in where the feed gave none. */
 export async function getOptionChain(req: ChainRequest, ttlSec = 120) {
-  const key = `opt:chain:v1:${getEnv().OPTIONS_PROVIDER}:${req.symbol}:${req.type}:${req.dteMin}-${req.dteMax}`;
-  const c = await cached(key, ttlSec, async () => {
-    const r = await fetchOptionChain(req);
-    const today = new Date().toISOString().slice(0, 10);
-    const rate = await riskFreeRate();
-    return { ...r, contracts: addModelDeltas(r.contracts, req.price, rate, today, req.divYield ?? 0), rate };
-  });
-  return { ...c.data, fetchedAt: c.fetchedAt, stale: c.stale };
+  // Cache provider quotes, not derived Greeks: spot and dividend yield can change between callers.
+  const key = `opt:chain:v2:${getEnv().OPTIONS_PROVIDER}:${req.symbol}:${req.type}:${req.dteMin}-${req.dteMax}`;
+  const c = await cached(key, ttlSec, () => fetchOptionChain(req));
+  const rate = await riskFreeRate();
+  const today = new Date().toISOString().slice(0, 10);
+  const contracts = addModelDeltas(c.data.contracts, req.price, rate, today, req.divYield ?? 0);
+  return { ...c.data, contracts, rate, fetchedAt: c.fetchedAt, stale: c.stale };
 }

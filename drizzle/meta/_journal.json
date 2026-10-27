@@ -29,6 +29,13 @@
       "when": 1792990472301,
       "tag": "0003_wheel_history_positions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793071738626,
+      "tag": "0004_option_quote_snapshots",
+      "breakpoints": true
     }
   ]
 }

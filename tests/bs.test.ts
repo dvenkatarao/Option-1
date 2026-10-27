@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bsDelta, normCdf } from "../src/lib/bs";
+import { bsDelta, bsGreeks, normCdf } from "../src/lib/bs";
 
 describe("black-scholes", () => {
   it("normal CDF matches reference values", () => {
@@ -20,5 +20,15 @@ describe("black-scholes", () => {
     expect(p).toBeGreaterThan(-0.01);
     expect(bsDelta({ type: "put", spot: 100, strike: 90, years: 0, iv: 0.2, rate: 0.04 })).toBeNull();
     expect(bsDelta({ type: "put", spot: 100, strike: 90, years: 0.1, iv: 0, rate: 0.04 })).toBeNull();
+  });
+  it("computes scaled European Greeks and rejects invalid model inputs", () => {
+    const greeks = bsGreeks({ type: "call", spot: 100, strike: 100, years: 1, iv: 0.2, rate: 0.05 })!;
+    expect(greeks.delta).toBeCloseTo(0.6368, 3);
+    expect(greeks.gamma).toBeCloseTo(0.01876, 4);
+    expect(greeks.theta).toBeCloseTo(-0.01757, 4); // per calendar day
+    expect(greeks.vega).toBeCloseTo(0.3752, 3); // per volatility percentage point
+    expect(greeks.rho).toBeCloseTo(0.5323, 3); // per rate percentage point
+    expect(bsGreeks({ type: "put", spot: 100, strike: 100, years: 0, iv: 0.2, rate: 0.05 })).toBeNull();
+    expect(bsGreeks({ type: "put", spot: 100, strike: 100, years: 1, iv: 0.2, rate: Number.NaN })).toBeNull();
   });
 });

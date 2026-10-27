@@ -7,6 +7,29 @@ beforeAll(async () => {
   m = await import("../src/lib/wheel-service");
 });
 
+describe("matchesWheelGrade", () => {
+  it("uses inclusive minimum-grade semantics and supports exact matches", () => {
+    expect(m.matchesWheelGrade("A+", "B", "minimum")).toBe(true);
+    expect(m.matchesWheelGrade("A", "B", "minimum")).toBe(true);
+    expect(m.matchesWheelGrade("B", "B", "minimum")).toBe(true);
+    expect(m.matchesWheelGrade("C", "B", "minimum")).toBe(false);
+    expect(m.matchesWheelGrade("A", "A", "exact")).toBe(true);
+    expect(m.matchesWheelGrade("A+", "A", "exact")).toBe(false);
+    expect(m.matchesWheelGrade("F", "all", "exact")).toBe(true);
+    expect(m.matchesWheelGrade(null, "all", "minimum")).toBe(false);
+  });
+});
+
+describe("comparePutCandidates", () => {
+  const higherScore = { score: 80, annRoc: 0.1 };
+  const higherReturn = { score: 50, annRoc: 0.25 };
+  it("ranks by overall score or annualized ROC with a sensible tie-break", () => {
+    expect(m.comparePutCandidates(higherScore, higherReturn, "score")).toBeLessThan(0);
+    expect(m.comparePutCandidates(higherScore, higherReturn, "annRoc")).toBeGreaterThan(0);
+    expect(m.comparePutCandidates({ score: 80, annRoc: 0.12 }, { score: 80, annRoc: 0.1 }, "score")).toBeLessThan(0);
+  });
+});
+
 describe("scanIsStale", () => {
   const tue11et = new Date("2026-10-20T15:00:00Z"); // market open
   const sat = new Date("2026-10-24T15:00:00Z"); // closed
