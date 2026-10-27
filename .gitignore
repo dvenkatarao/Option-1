@@ -12,6 +12,9 @@ out/
 
 # Test output
 coverage/
+# Keep the application API route with the same name as the coverage artifact directory.
+!src/app/api/coverage/
+!src/app/api/coverage/route.ts
 
 # Runtime / debug files
 *.log
