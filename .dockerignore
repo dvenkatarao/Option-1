@@ -7,6 +7,8 @@ node_modules
 !.env.example
 *.log
 coverage
+!src/app/api/coverage/
+!src/app/api/coverage/route.ts
 docs
 README.md
 DEPLOYMENT.md
