@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Activity, AlertTriangle, CalendarClock, CheckCircle2, CircleHelp, Database, Gauge, Plus, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
 import { LiveWheelDetailView } from "./LiveWheelDetailView";
+import { DEFAULT_WHEEL_FILTERS, DEFAULT_WHEEL_FILTER_QUERY, serializeWheelFilterState, type WheelFilterState } from "./wheel-filter-state";
 import type { OptionContract } from "../../lib/wheel";
 
 type WheelRow = {
@@ -15,9 +16,6 @@ type WheelRow = {
 type Results = { rows: WheelRow[]; heldBackByEarnings: { ticker: string; days: number | null }[]; earningsWatch: { g: { row: { ticker: string; name: string | null } }; days: number; estimated: boolean }[]; rejected: Record<string, number>; info: { eligible: number; scanned: number; failed: { ticker: string; error: string }[]; waiting: number; oldest: string | null; sources: Record<string, number>; fallbacks: number; universe: number; hydrated: number; staleStocks: number; missingFields: number; missingDropped: number }; ivRanks: Record<string, number | null>; generatedAt: string };
 type WheelPosition = { id: string; ticker: string; side: "put_sold" | "assigned" | "call_sold" | "closed"; strike: number; expiration: string; premium: number; quantity: number; openedAt: string; closedAt: string | null; costBasis: number | null; notes: string | null; createdAt: string };
 type Chain = { symbol: string; price: number; nextEarnings: string | null; source: string; fetchedAt: string | null; stale: boolean; contracts: { type: "put" | "call"; strike: number; expiration: string; bid: number | null; ask: number | null; iv: number | null; delta: number | null; oi: number | null }[] };
-type WheelFilterState = { grade: string; gradeMatch: "minimum" | "exact"; sortBy: "score" | "annRoc"; account: string; dteMin: string; dteMax: string; deltaMin: string; deltaMax: string; minOi: string; maxSpread: string; minReturn: string; minScore: string; earnings: boolean; trend: boolean; dividendOnly: boolean };
-const initialFilters: WheelFilterState = { grade: "A", gradeMatch: "minimum", sortBy: "score", account: "all", dteMin: "21", dteMax: "50", deltaMin: "0.15", deltaMax: "0.3", minOi: "100", maxSpread: "10", minReturn: "8", minScore: "15", earnings: false, trend: false, dividendOnly: false };
-
 const cash = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "N/A" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const pct = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "N/A" : `${(value * 100).toFixed(1)}%`;
 const inputClass = "w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500/60";
@@ -32,8 +30,8 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function LiveWheelView() {
   const [results, setResults] = useState<Results | null>(null);
   const [positions, setPositions] = useState<WheelPosition[]>([]);
-  const [filterValues, setFilterValues] = useState<WheelFilterState>(initialFilters);
-  const [filterQuery, setFilterQuery] = useState("");
+  const [filterValues, setFilterValues] = useState<WheelFilterState>(DEFAULT_WHEEL_FILTERS);
+  const [filterQuery, setFilterQuery] = useState(DEFAULT_WHEEL_FILTER_QUERY);
   const [chain, setChain] = useState<Chain | null>(null);
   const [chainTicker, setChainTicker] = useState<string | null>(null);
   const [detailTicker, setDetailTicker] = useState<string | null>(null);
@@ -59,24 +57,7 @@ export function LiveWheelView() {
 
   const applyFilters = (event: FormEvent) => {
     event.preventDefault();
-    const query = new URLSearchParams({
-      preset: filterValues.grade,
-      gradeMatch: filterValues.gradeMatch,
-      sortBy: filterValues.sortBy,
-      acct: filterValues.account,
-      dteMin: filterValues.dteMin,
-      dteMax: filterValues.dteMax,
-      dMin: filterValues.deltaMin,
-      dMax: filterValues.deltaMax,
-      oi: filterValues.minOi,
-      spread: filterValues.maxSpread,
-      ret: filterValues.minReturn,
-      minScore: filterValues.minScore,
-    });
-    if (filterValues.earnings) query.set("earn", "1");
-    if (filterValues.trend) query.set("trend", "1");
-    if (filterValues.dividendOnly) query.set("divOnly", "1");
-    setFilterQuery(query.toString());
+    setFilterQuery(serializeWheelFilterState(filterValues));
   };
 
   const runBatch = async (kind: "refresh" | "scan") => {

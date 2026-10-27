@@ -1,5 +1,6 @@
-import React from 'react';
-import { ETFData, WheelStock, ActiveWheelCampaign } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { ETFData, ActiveWheelCampaign } from '../../types';
+import { DEFAULT_WHEEL_FILTER_QUERY } from '../live/wheel-filter-state';
 import { MainTabType } from '../layout/Navbar';
 import {
   ShieldAlert,
@@ -14,29 +15,88 @@ import {
   Info,
 } from 'lucide-react';
 
+type LiveWheelRow = {
+  g: {
+    grade: string | null;
+    row: { ticker: string; name: string | null; sector: string | null };
+  };
+  ctx: { price: number };
+  best: {
+    contract: { strike: number; expiration: string; delta: number | null };
+    dte: number;
+    credit: number;
+    cash: number;
+    annRoc: number;
+    score: number;
+    breakeven: number;
+    breakevenCushion: number;
+    probOtm: number;
+  };
+  source: string | null;
+  fallbackReason: string | null;
+  scannedAt: string;
+};
+
+type LiveWheelResults = {
+  rows: LiveWheelRow[];
+  info: { eligible: number; scanned: number; waiting: number };
+  ivRanks: Record<string, number | null>;
+  generatedAt: string;
+};
+
 interface DashboardViewProps {
   etfs: ETFData[];
-  wheelStocks: WheelStock[];
   activeCampaigns: ActiveWheelCampaign[];
   onSelectETF: (etf: ETFData) => void;
-  onSelectWheelStock: (stock: WheelStock) => void;
   onNavigate: (tab: MainTabType) => void;
+  onViewAllWheelOpportunities: () => void;
   onOpenCompare: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   etfs,
-  wheelStocks,
   activeCampaigns,
   onSelectETF,
-  onSelectWheelStock,
   onNavigate,
+  onViewAllWheelOpportunities,
   onOpenCompare,
 }) => {
-  // Top 3 Wheel Opportunities (sorted by Wheel Suitability Score & Undervaluation)
-  const topWheelPicks = [...wheelStocks]
-    .sort((a, b) => b.wheelSuitabilityScore - a.wheelSuitabilityScore)
-    .slice(0, 3);
+  const [liveWheelResults, setLiveWheelResults] = useState<LiveWheelResults | null>(null);
+  const [liveWheelLoading, setLiveWheelLoading] = useState(true);
+  const [liveWheelError, setLiveWheelError] = useState<string | null>(null);
+  const topWheelPicks = liveWheelResults?.rows.slice(0, 3) ?? [];
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setLiveWheelLoading(true);
+      try {
+        const response = await fetch(`/api/wheel/results?${DEFAULT_WHEEL_FILTER_QUERY}`, { cache: 'no-store' });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(typeof body?.error === 'string' ? body.error : `Live wheel scan unavailable (${response.status})`);
+        }
+        if (active) {
+          setLiveWheelResults(body as LiveWheelResults);
+          setLiveWheelError(null);
+        }
+      } catch (error) {
+        if (active) setLiveWheelError(error instanceof Error ? error.message : 'Live wheel scan unavailable');
+      } finally {
+        if (active) setLiveWheelLoading(false);
+      }
+    };
+
+    void load();
+    const timer = window.setInterval(() => void load(), 5 * 60 * 1000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const formatCash = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
   // Spotlight ETFs
   const coreGrowthETF = etfs.find((e) => e.symbol === 'VOO') || etfs[0];
@@ -67,7 +127,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Quick Strategy Pills */}
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <button
-                onClick={() => onNavigate('wheel')}
+                onClick={onViewAllWheelOpportunities}
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-lg shadow-emerald-500/20"
               >
                 <RotateCw className="w-4 h-4 animate-spin-slow" />
@@ -129,120 +189,171 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Section 1: Today's High-Conviction Wheel Radar */}
+      {/* Section 1: Provider-backed wheel opportunities */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-bold text-white">Today&apos;s Prime Wheel Opportunities</h2>
+              <h2 className="text-lg font-bold text-white">Top Provider-Scanned Wheel Opportunities</h2>
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono">
-                Safe 0.20-0.22 Delta • Wide Moat
+                A+ / A Quality • Provider Scanned
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Screened for pristine balance sheets, undervaluation discount, and optimal 30-45 DTE theta decay.
+              Top candidates from the A-or-better live scanner filter: 21–50 DTE and 0.15–0.30 absolute delta.
             </p>
           </div>
 
           <button
-            onClick={() => onNavigate('wheel')}
+            onClick={onViewAllWheelOpportunities}
             className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition self-start sm:self-auto"
           >
-            <span>View All {wheelStocks.length} Blue-Chips</span>
+            <span>
+              {liveWheelResults
+                ? `View All ${liveWheelResults.rows.length} A+ / A Candidates`
+                : 'View All A+ / A Candidates'}
+            </span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {topWheelPicks.map((stock) => {
-            const bestPut = stock.optionChains[0]?.puts[1] || stock.optionChains[0]?.puts[0];
-            return (
-              <div
-                key={stock.symbol}
-                className="bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-5 transition-all shadow-md group flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-mono font-bold text-white group-hover:text-emerald-400 transition">
-                          {stock.symbol}
-                        </span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
-                          Score {stock.wheelSuitabilityScore}/100
-                        </span>
+        {liveWheelError && (
+          <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+            {liveWheelResults
+              ? `Refresh failed: ${liveWheelError}. Showing the last provider scan; check each scan timestamp.`
+              : `Live wheel data is unavailable: ${liveWheelError}. No sample candidates are substituted.`}
+          </div>
+        )}
+
+        {liveWheelLoading && !liveWheelResults ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-8 text-center text-sm text-slate-400">
+            Loading provider-scanned A+ / A opportunities…
+          </div>
+        ) : !liveWheelResults ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-8 text-center text-sm text-slate-400">
+            Open the Live Provider Scanner to check data-source health and refresh the scan.
+          </div>
+        ) : topWheelPicks.length === 0 ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-200">
+              {!liveWheelResults.info.eligible
+                ? 'No A+ / A stock fundamentals are hydrated yet.'
+                : !liveWheelResults.info.scanned
+                  ? 'No provider option-chain scans are available yet.'
+                  : 'No contracts currently meet these filters.'}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {liveWheelResults.info.eligible
+                ? `${liveWheelResults.info.scanned} eligible stocks scanned; ${liveWheelResults.info.waiting} still waiting for a scan.`
+                : 'The dashboard will not fill empty results with the old sample stock list.'}
+            </p>
+            <button
+              onClick={onViewAllWheelOpportunities}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/15"
+            >
+              Open Live Provider Scanner <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {topWheelPicks.map((candidate, index) => {
+              const { best, g, ctx } = candidate;
+              const contract = best.contract;
+              const ivRank = liveWheelResults.ivRanks[g.row.ticker];
+              return (
+                <div
+                  key={g.row.ticker}
+                  className="bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-5 transition-all shadow-md group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-mono font-bold text-white group-hover:text-emerald-400 transition">
+                            {g.row.ticker}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
+                            Rank #{index + 1}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-400 font-medium">{g.row.name ?? g.row.sector ?? 'Stock'}</span>
                       </div>
-                      <span className="text-xs text-slate-400 font-medium">{stock.name}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-mono font-bold text-slate-100">{formatCash(ctx.price)}</span>
+                        <span className="text-[10px] font-mono text-cyan-300 block">Score {best.score.toFixed(0)}</span>
+                      </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-sm font-mono font-bold text-slate-100">${stock.price.toFixed(2)}</span>
-                      <span className="text-[11px] font-mono text-emerald-400 block">+{stock.change24h}%</span>
+                    <div className="grid grid-cols-3 gap-2 my-3.5 py-2.5 px-3 bg-slate-950/60 rounded-lg border border-slate-800/80 text-[11px] font-mono">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Quality</span>
+                        <span className="font-bold text-emerald-300">{g.grade ?? 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Put Delta</span>
+                        <span className="font-bold text-slate-200">{contract.delta == null ? 'N/A' : contract.delta.toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">IV Rank</span>
+                        <span className="font-bold text-cyan-300">{ivRank == null ? 'N/A' : `${ivRank}%`}</span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Stock Fundamentals Snapshot */}
-                  <div className="grid grid-cols-3 gap-2 my-3.5 py-2.5 px-3 bg-slate-950/60 rounded-lg border border-slate-800/80 text-[11px] font-mono">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Undervalued</span>
-                      <span className="font-bold text-emerald-400">+{stock.undervaluationPercent}%</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Moat Rating</span>
-                      <span className="font-bold text-slate-200">{stock.economicMoat}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">IV Rank</span>
-                      <span className="font-bold text-cyan-400">{stock.ivRank}%</span>
-                    </div>
-                  </div>
-
-                  {/* Recommended Put Strike Info */}
-                  {bestPut && (
-                    <div className="space-y-1.5 text-xs bg-emerald-950/20 border border-emerald-800/30 rounded-lg p-3">
+                    <div className="space-y-2 text-xs bg-emerald-950/20 border border-emerald-800/30 rounded-lg p-3">
                       <div className="flex justify-between items-center text-slate-300">
-                        <span className="text-slate-400 font-medium">Recommended Put:</span>
+                        <span className="text-slate-400 font-medium">Cash-secured put:</span>
                         <span className="font-mono font-bold text-emerald-300">
-                          ${bestPut.strike} Strike (35 DTE)
+                          {formatCash(contract.strike)} · {contract.expiration}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center text-slate-300">
-                        <span className="text-slate-400">Premium / Win Rate:</span>
-                        <span className="font-mono text-slate-100">
-                          ${bestPut.premiumReceived} ({bestPut.probabilityOfProfit}% POP)
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Annualized ROC:</span>
-                        <span className="font-mono font-extrabold text-emerald-400 text-sm">
-                          {bestPut.annualizedROC}%
-                        </span>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-emerald-900/30 pt-2 text-[11px]">
+                        <div>
+                          <span className="text-slate-500 block">Est. credit / contract</span>
+                          <span className="font-mono font-bold text-white">{formatCash(best.credit * 100)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Prob. OTM*</span>
+                          <span className="font-mono font-bold text-slate-200">{formatPercent(best.probOtm)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">DTE · Annualized ROC</span>
+                          <span className="font-mono text-slate-200">{best.dte}d · {formatPercent(best.annRoc)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Cash collateral</span>
+                          <span className="font-mono text-slate-200">{formatCash(best.cash)}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500">Breakeven: </span>
+                          <span className="font-mono text-slate-200">{formatCash(best.breakeven)} ({formatPercent(best.breakevenCushion)} cushion)</span>
+                        </div>
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  <p className="mt-3 text-[11px] text-slate-400 leading-tight line-clamp-2">
-                    {stock.whyGoodForWheel}
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
+                    <span
+                      className="text-[9px] text-slate-500 font-mono"
+                      title={candidate.fallbackReason ? `Backup provider used: ${candidate.fallbackReason}` : undefined}
+                    >
+                      {candidate.source ?? 'Provider'}{candidate.fallbackReason ? ' · backup' : ''} · Scanned {new Date(candidate.scannedAt).toLocaleString()}
+                    </span>
+                    <button
+                      onClick={onViewAllWheelOpportunities}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 hover:text-slate-950 text-slate-200 text-xs font-semibold transition"
+                    >
+                      Review in Live Scanner <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[9px] leading-relaxed text-slate-600">
+                    *Model-based probability proxy, not a measured win rate. Quotes may be delayed.
                   </p>
                 </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500 font-mono">
-                    Collateral: ${((bestPut?.collateralRequired || 10000)).toLocaleString()}
-                  </span>
-                  <button
-                    onClick={() => onSelectWheelStock(stock)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 hover:text-slate-950 text-slate-200 text-xs font-semibold transition"
-                  >
-                    <span>Simulate Wheel</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Section 2: ETF Intelligence Spotlight & NAV Health Alert */}

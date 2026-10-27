@@ -189,13 +189,15 @@ export function App() {
         {activeTab === 'dashboard' && (
           <DashboardView
             etfs={etfs}
-            wheelStocks={wheelStocks}
             activeCampaigns={activeCampaigns}
             onSelectETF={(etf) => setSelectedETF(etf)}
-            onSelectWheelStock={(stock) => handleSelectStockForSimulator(stock)}
             onNavigate={(tab) => {
               setActiveTab(tab);
               setIsCompareViewOpen(false);
+            }}
+            onViewAllWheelOpportunities={() => {
+              setActiveTab('wheel');
+              setWheelSubTab('live');
             }}
             onOpenCompare={() => {
               setActiveTab('etfs');
