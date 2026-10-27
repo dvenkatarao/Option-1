@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { WheelStock, OptionContract } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import {
   RotateCw,
   Search,
@@ -86,11 +87,11 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
             <RotateCw className="w-6 h-6 text-emerald-400" />
             <h1 className="text-2xl font-extrabold text-white">Options Wheel Opportunity Scanner</h1>
             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              {filteredStocks.length} Blue-Chips Screened
+              {filteredStocks.length} Sample Blue-Chips
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Filter high-moat US corporations with favorable IV, high probability of profit (80%+ POP), and attractive annualized Return on Capital (ROC).
+            Explore an illustrative filter of the bundled sample universe. Delta-derived POP is a proxy, not a measured win rate; annualized ROC is scenario math, not a forecast.
           </p>
         </div>
 
@@ -116,6 +117,8 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
           </div>
         </div>
       </div>
+
+      <IllustrativeDataNotice detail="This legacy scanner uses bundled sample stock prices, valuation signals, IV metrics, and option chains. These are not current market quotes or tradeable recommendations; use Live Provider Scanner for source-stamped candidates." />
 
       {/* Sector Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -188,9 +191,9 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
                 className="w-full accent-emerald-500 cursor-pointer"
               />
               <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                <span>8% (Safe)</span>
-                <span>18% (Target)</span>
-                <span>30%+ (Aggressive)</span>
+                <span>8% (Lower filter)</span>
+                <span>18% (Reference)</span>
+                <span>30%+ (Higher filter)</span>
               </div>
             </div>
 
@@ -198,7 +201,7 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
             <div>
               <div className="flex justify-between items-center text-slate-400 mb-1.5">
                 <span>Max Target Delta:</span>
-                <span className="font-mono font-bold text-cyan-300">Δ {maxDelta.toFixed(2)} ({Math.round((1 - maxDelta) * 100)}% Win)</span>
+                <span className="font-mono font-bold text-cyan-300">Δ {maxDelta.toFixed(2)} ({Math.round((1 - maxDelta) * 100)}% OTM proxy)</span>
               </div>
               <input
                 type="range"
@@ -210,9 +213,9 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
                 className="w-full accent-cyan-500 cursor-pointer"
               />
               <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                <span>0.15 (85% Win)</span>
-                <span>0.22 (80% Win)</span>
-                <span>0.35 (65% Win)</span>
+                <span>0.15 (~85% OTM proxy)</span>
+                <span>0.22 (~78% OTM proxy)</span>
+                <span>0.35 (~65% OTM proxy)</span>
               </div>
             </div>
 
@@ -330,7 +333,7 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
                       <div className="flex justify-between items-center pb-1.5 border-b border-emerald-900/30">
                         <span className="text-slate-300 font-semibold flex items-center gap-1">
                           <Flame className="w-3.5 h-3.5 text-amber-400" />
-                          Recommended 35 DTE Put:
+                          Example 35 DTE put:
                         </span>
                         <span className="font-mono font-bold text-emerald-300 text-sm">
                           ${bestPut.strike} Strike
@@ -339,9 +342,9 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
 
                       <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Premium / Win Rate:</span>
+                          <span className="text-slate-400 block text-[10px]">Example premium / OTM proxy:</span>
                           <span className="font-bold text-white">
-                            ${bestPut.premiumReceived} ({bestPut.probabilityOfProfit}% POP)
+                            ${bestPut.premiumReceived} (~{bestPut.probabilityOfProfit}% OTM proxy)
                           </span>
                         </div>
                         <div>
@@ -351,7 +354,7 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Downside Buffer:</span>
+                          <span className="text-slate-400 block text-[10px]">Breakeven distance:</span>
                           <span className="text-emerald-400 font-bold">{bestPut.downsideBuffer}% to Breakeven</span>
                         </div>
                         <div>
@@ -399,13 +402,13 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
               <tr>
                 <th className="py-3 px-3">Ticker</th>
                 <th className="py-3 px-3 text-right">Price</th>
-                <th className="py-3 px-3 text-center">Score</th>
-                <th className="py-3 px-3 text-center">Moat</th>
-                <th className="py-3 px-3 text-right">Undervalued</th>
+                <th className="py-3 px-3 text-center">Sample score</th>
+                <th className="py-3 px-3 text-center">Example moat</th>
+                <th className="py-3 px-3 text-right">Example valuation</th>
                 <th className="py-3 px-3 text-right">IV Rank</th>
-                <th className="py-3 px-3 text-center">Rec. Put Strike</th>
+                <th className="py-3 px-3 text-center">Example put strike</th>
                 <th className="py-3 px-3 text-right">Premium</th>
-                <th className="py-3 px-3 text-right">POP %</th>
+                <th className="py-3 px-3 text-right">OTM proxy %</th>
                 <th className="py-3 px-3 text-right">Annual ROC</th>
                 <th className="py-3 px-3 text-right">Actions</th>
               </tr>
@@ -430,7 +433,7 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
                       ${bestPut?.strike || '—'}
                     </td>
                     <td className="py-3 px-3 text-right text-white font-bold">${bestPut?.premiumReceived}</td>
-                    <td className="py-3 px-3 text-right text-cyan-400">{bestPut?.probabilityOfProfit}%</td>
+                    <td className="py-3 px-3 text-right text-cyan-400">{bestPut ? `~${bestPut.probabilityOfProfit}%` : "N/A"}</td>
                     <td className="py-3 px-3 text-right font-extrabold text-emerald-400 text-sm">
                       {bestPut?.annualizedROC}%
                     </td>

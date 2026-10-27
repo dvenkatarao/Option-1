@@ -28,5 +28,9 @@ export type ScreenRow = {
   priceRet3y: number | null;
   capFunded: number | null;
   divCagr3y: number | null;
+  /** Holdings-weighted analyst recommendation mean (Yahoo scale: 1=strong buy, 5=sell); optional on demand. */
+  analystRec: number | null;
+  /** Share of reported top-holdings weight with recommendation data, 0-1. */
+  analystCoverage: number | null;
   freq: string;
 };

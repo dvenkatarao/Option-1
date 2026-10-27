@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ETFData } from '../../types';
 import { calculateETFOverlap } from '../../utils/financialMath';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import {
   Layers,
   ShieldCheck,
@@ -143,6 +144,8 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
           </select>
         </div>
       </div>
+
+      <IllustrativeDataNotice detail="This comparison uses the bundled demo snapshot and an explicitly hypothetical 8% gross-return assumption in the fee-drag example. It is for education, not a current quote-based comparison or return forecast." />
 
       {/* Selected ETF Badges */}
       <div className="flex flex-wrap items-center gap-2">

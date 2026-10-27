@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { Activity, AlertTriangle, BookOpen, Check, CircleHelp, Download, ExternalLink, Gauge, Layers3, Newspaper, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, AlertTriangle, BookOpen, Check, CircleHelp, Download, ExternalLink, Gauge, GitCompareArrows, Layers3, Newspaper, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
 import type { ScreenRow } from "../../types/liveScreener";
+import { starterForAnswers } from "@/lib/starter-portfolios";
 
-type HubTab = "macro" | "news" | "recommend" | "sources";
+type HubTab = "macro" | "news" | "recommend" | "similar" | "sources";
 type Obs = { date: string; value: number };
 type MacroPoint = { def: { id: string; label: string; unit: string; group: string; note: string; decimals?: number }; latest: number | null; date: string | null; history: Obs[]; error?: string };
 type MacroData = {
@@ -30,17 +31,21 @@ type RecommendationData = {
   ranked: { row: ScreenRow; score: number; coverage: number; parts: { label: string; rank: number; value: number; weight: number }[] }[];
   eligible: number;
   returned: number;
+  analystCoverage: { requested: boolean; minimumCoverage: number; scoreWeight: number; fundsWithUsableCoverage: number; fundsScreened: number; coveragePct: number };
   note: string;
 };
 type SourceInfo = { id: string; name: string; category: string; provider: string; auth: string; envVar?: string; freeLimits: string; provides: string[]; verification: "live" | "docs" | "partial" | "failed"; testedNote: string; usedInApp: boolean; caveats: string[] };
 type SourceCatalog = { verifiedOn: string; sources: SourceInfo[] };
 type SourceHealth = { checkedAt: string; results: { id: string; status: "ok" | "reachable" | "down"; httpStatus: number | null; ms: number | null; note: string }[]; configured: Record<string, boolean> };
 type Coverage = { generatedAt: string; universeSize: number; inDatabase: number; hydrated: number; quotesReceived: number; fields: { key: string; label: string; group: string; have: number; total: number; pct: number | null; note?: string }[]; readiness: { feature: string; component: string; pct: number | null; status: string; basis: string }[]; byAssetClass: { assetClass: string; n: number; holdings: number; expense: number; aum: number; alloc: number }[] };
+type SimilarityPair = { a: string; b: string; correlation5y: number | null; pairedReturnDays: number; top10Overlap: number | null; commonHoldings: { symbol: string; weightA: number; weightB: number }[]; evidence: ("return-correlation" | "top-10-holdings")[] };
+type SimilarityData = { generatedAt: string; sourceAsOf: string | null; storedFunds: number; historiesAvailable: number; comparedPairs: number; eligibleCorrelationPairs: number; holdingsPairs: number; thresholds: { returnCorrelation: number; top10Overlap: number; minimumHistoryDays: number; minimumPairedReturns: number }; groups: { members: string[]; pairs: SimilarityPair[] }[] };
 
 const tabs: { id: HubTab; label: string; icon: typeof Activity }[] = [
   { id: "macro", label: "Macro signals", icon: Gauge },
   { id: "news", label: "News & events", icon: Newspaper },
   { id: "recommend", label: "ETF research", icon: TrendingUp },
+  { id: "similar", label: "Similar ETFs", icon: GitCompareArrows },
   { id: "sources", label: "Sources & coverage", icon: Layers3 },
 ];
 
@@ -137,28 +142,71 @@ function NewsPanel() {
   );
 }
 
+function EtfSimilarityPanel() {
+  const [data, setData] = useState<SimilarityData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stamp, setStamp] = useState(0);
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try { setData(await requestJson<SimilarityData>("/api/etfs/similar")); }
+    catch (e) { setError(e instanceof Error ? e.message : "ETF similarity request failed"); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load, stamp]);
+
+  return (
+    <div className="space-y-5">
+      <PanelHeader icon={GitCompareArrows} title="Similar ETF groups" subtitle="Find funds with closely aligned five-year total-return behavior or substantial overlap among their provider-reported top holdings. The analysis uses stored data only; it does not discover or refresh funds." onRefresh={() => setStamp((value) => value + 1)} refreshing={loading} />
+      <LoadNotice error={error} detail="ETF groups require stored history and/or at least five weighted top holdings for each fund. Missing evidence is left unavailable, not treated as zero." />
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-[11px] leading-relaxed text-slate-400">
+        <b className="text-slate-200">Method:</b> a direct link is created at 5Y adjusted-return correlation ≥ {(data?.thresholds.returnCorrelation ?? 0.95).toFixed(2)} or top-10 holdings overlap ≥ {pct(data?.thresholds.top10Overlap ?? 0.5)}. Overlap is the sum of minimum reported weights for common symbols; it is a lower bound because the provider exposes only a partial holdings list. Groups are transitively connected—review the listed direct links because not every pair in a group must meet a threshold. Correlation is not evidence of identical risk or future performance.
+        <div className="mt-2 text-[10px] text-slate-600">Stored funds: {data?.storedFunds ?? "—"} · histories: {data?.historiesAvailable ?? "—"} · pairs checked: {data?.comparedPairs ?? "—"} · source history through {data?.sourceAsOf ?? "N/A"}</div>
+      </div>
+      {loading && !data ? <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">Comparing stored ETF histories and holdings…</div> : data?.groups.length ? <div className="space-y-3">{data.groups.map((group, index) => <section key={`${group.members.join("-")}-${index}`} className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-bold text-white">Similar-fund group {String(index + 1).padStart(2, "0")}</h3><div className="mt-2 flex flex-wrap gap-1.5">{group.members.map((ticker) => <span key={ticker} className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-cyan-200">{ticker}</span>)}</div></div><span className="rounded-full border border-slate-700 bg-slate-950 px-2.5 py-1 font-mono text-[10px] text-slate-400">{group.pairs.length} direct link{group.pairs.length === 1 ? "" : "s"}</span></div><div className="mt-4 grid gap-2 lg:grid-cols-2">{group.pairs.map((pair) => <article key={`${pair.a}-${pair.b}`} className="rounded-lg border border-slate-800 bg-slate-950 p-3"><div className="flex items-center justify-between gap-3"><span className="font-mono text-xs font-bold text-slate-100">{pair.a} <span className="text-slate-600">↔</span> {pair.b}</span><div className="flex flex-wrap justify-end gap-1">{pair.evidence.map((reason) => <span key={reason} className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">{reason === "return-correlation" ? "5Y correlation" : "top-10 overlap"}</span>)}</div></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-md bg-slate-900 p-2"><div className="text-[9px] uppercase tracking-wide text-slate-500">5Y total-return correlation</div><div className="mt-1 font-mono text-xs font-bold text-slate-200">{pair.correlation5y == null ? "N/A" : pair.correlation5y.toFixed(3)}</div><div className="text-[9px] text-slate-600">{pair.pairedReturnDays} paired return days</div></div><div className="rounded-md bg-slate-900 p-2"><div className="text-[9px] uppercase tracking-wide text-slate-500">Top-10 overlap · lower bound</div><div className="mt-1 font-mono text-xs font-bold text-slate-200">{pct(pair.top10Overlap)}</div></div></div>{pair.commonHoldings.length > 0 && <div className="mt-2 text-[9px] text-slate-500">Common reported holdings: {pair.commonHoldings.slice(0, 5).map((holding) => `${holding.symbol} (${pct(Math.min(holding.weightA, holding.weightB))})`).join(" · ")}</div>}</article>)}</div></section>)}</div> : data && <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900 p-8 text-center text-xs text-slate-500">No ETF pairs met the documented similarity thresholds with the stored history and holdings currently available.</div>}
+    </div>
+  );
+}
+
 function RecommendPanel() {
   const [goal, setGoal] = useState<Goal>("balanced");
+  const [horizon, setHorizon] = useState<"1-3" | "3-7" | "7+">("3-7");
+  const [risk, setRisk] = useState<"preserve" | "modest" | "grow">("modest");
   const [assetClass, setAssetClass] = useState("all");
+  const [includeAnalyst, setIncludeAnalyst] = useState(false);
   const [data, setData] = useState<RecommendationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const starter = useMemo(() => starterForAnswers(goal, horizon, risk), [goal, horizon, risk]);
+  const rankingGoal: Goal = starter.goal;
   const load = useCallback(async () => {
     setLoading(true); setError(null);
-    const params = new URLSearchParams({ goal });
+    const params = new URLSearchParams({ goal: rankingGoal });
     if (assetClass !== "all") params.set("assetClass", assetClass);
+    if (includeAnalyst) params.set("analyst", "1");
     try { setData(await requestJson<RecommendationData>(`/api/recommend?${params.toString()}`)); }
     catch (e) { setError(e instanceof Error ? e.message : "Recommendation request failed"); }
     finally { setLoading(false); }
-  }, [goal, assetClass]);
+  }, [rankingGoal, assetClass, includeAnalyst]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
   return (
     <div className="space-y-5">
-      <PanelHeader icon={TrendingUp} title="Transparent ETF research rankings" subtitle="Choose an objective to rank funds by published metric weights. Percentile ranks are computed within asset class by default; the model omits records without sufficient real-data coverage." />
-      <LoadNotice error={error} detail="Hydrate the ETF universe and configure PostgreSQL to build the ranked dataset. No investment recommendation is generated when the inputs are missing." />
-      <div className="grid gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto] sm:items-end"><label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Research goal<select value={goal} onChange={(event) => setGoal(event.target.value as Goal)} className="mt-1.5 block w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs normal-case tracking-normal text-slate-200 outline-none focus:border-emerald-500/60"><option value="balanced">Balanced total return</option><option value="income">Income</option><option value="growth">Growth</option><option value="lowcost">Low-cost core</option><option value="defensive">Defensive / low volatility</option></select></label><label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Peer group<select value={assetClass} onChange={(event) => setAssetClass(event.target.value)} className="mt-1.5 block w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs normal-case tracking-normal text-slate-200 outline-none focus:border-emerald-500/60"><option value="all">All asset classes · rank within class</option><option value="Equity">Equity</option><option value="Fixed income">Fixed income</option><option value="Commodities & crypto">Commodities & crypto</option><option value="Cash-like">Cash-like</option></select></label><div className="text-right text-[10px] text-slate-500">{loading ? "Scoring…" : data ? `${data.returned} ranked · ${data.eligible} screened` : "No score"}</div></div>
-      {data && <div className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="flex items-start gap-2 text-xs font-semibold text-slate-200"><ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />{data.goalDefinition.label}: {data.goalDefinition.description}</div><div className="mt-3 flex flex-wrap gap-2">{data.goalDefinition.weights.map((weight) => <span key={weight.metric} className="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[10px] text-slate-400">{weight.label} <b className="font-mono text-emerald-300">{(weight.w * 100).toFixed(0)}%</b></span>)}</div></div>}
-      {loading && !data ? <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">Loading transparent rankings…</div> : data?.ranked.length ? <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900"><div className="grid grid-cols-[36px_minmax(110px,1fr)_82px_90px] gap-2 border-b border-slate-800 bg-slate-950 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid-cols-[48px_minmax(150px,1fr)_100px_110px_130px]"><span>#</span><span>ETF</span><span className="text-right">Score</span><span className="text-right">Data coverage</span><span className="hidden text-right sm:block">3Y total return</span></div>{data.ranked.slice(0, 20).map((entry, index) => <div key={entry.row.ticker} className="grid grid-cols-[36px_minmax(110px,1fr)_82px_90px] items-center gap-2 border-b border-slate-800/80 px-4 py-3 last:border-0 sm:grid-cols-[48px_minmax(150px,1fr)_100px_110px_130px]"><span className="font-mono text-xs text-slate-500">{String(index + 1).padStart(2, "0")}</span><div className="min-w-0"><div className="font-mono text-xs font-bold text-white">{entry.row.ticker} <span className="ml-1 font-sans font-normal text-slate-400">{entry.row.name ?? ""}</span></div><div className="mt-1 text-[10px] text-slate-600">{entry.row.category ?? entry.row.assetClass}</div></div><div className="text-right font-mono text-sm font-bold text-emerald-300">{entry.score.toFixed(0)}</div><div className="text-right font-mono text-xs text-slate-300">{pct(entry.coverage)}</div><div className="hidden text-right font-mono text-xs text-slate-300 sm:block">{pct(entry.row.r3y)}</div></div>)}</div> : data && <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900 p-8 text-center text-xs text-slate-500">Not enough stored coverage to rank funds yet. Continue ETF hydration and try again.</div>}
+      <PanelHeader icon={TrendingUp} title="Guided ETF advisor & transparent rankings" subtitle="Use goal, time horizon, and risk tolerance to select an editable starter allocation, then review provider-backed ETF rankings using published metric weights. Scores are research tools, not personalized investment advice." />
+      <LoadNotice error={error} detail="Rankings and fund metrics need hydrated ETF history and PostgreSQL. Analyst lookups are optional and only run when you enable them." />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Goal preference<select value={goal} onChange={(event) => setGoal(event.target.value as Goal)} className="mt-1.5 block w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs normal-case tracking-normal text-slate-200 outline-none focus:border-emerald-500/60"><option value="balanced">Balanced</option><option value="income">Income</option><option value="growth">Growth</option><option value="lowcost">Low-cost core</option><option value="defensive">Defensive</option></select></label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Time horizon<select value={horizon} onChange={(event) => setHorizon(event.target.value as typeof horizon)} className="mt-1.5 block w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs normal-case tracking-normal text-slate-200 outline-none focus:border-emerald-500/60"><option value="1-3">1–3 years</option><option value="3-7">3–7 years</option><option value="7+">7+ years</option></select></label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Risk tolerance<select value={risk} onChange={(event) => setRisk(event.target.value as typeof risk)} className="mt-1.5 block w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs normal-case tracking-normal text-slate-200 outline-none focus:border-emerald-500/60"><option value="preserve">Preserve capital</option><option value="modest">Moderate</option><option value="grow">Growth / higher risk</option></select></label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Ranking peer group<select value={assetClass} onChange={(event) => setAssetClass(event.target.value)} className="mt-1.5 block w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs normal-case tracking-normal text-slate-200 outline-none focus:border-emerald-500/60"><option value="all">All asset classes · ranked within class</option><option value="Equity">Equity</option><option value="Fixed income">Fixed income</option><option value="Commodities & crypto">Commodities & crypto</option><option value="Cash-like">Cash-like</option></select></label>
+      </div>
+      <section className="rounded-xl border border-cyan-500/20 bg-slate-900 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-bold text-white">{starter.name}</h3><span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase text-cyan-200">{starter.badge} · model example</span><span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[9px] text-slate-400">Ranking objective: {starter.goal}</span></div><p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-400">{starter.why}</p></div><div className="text-right text-[10px] text-slate-500">{loading ? "Scoring…" : data ? `${data.returned} ranked · ${data.eligible} screened` : "No score"}</div></div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{starter.holdings.map((holding) => <div key={holding.ticker} className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2"><div><span className="font-mono text-xs font-bold text-slate-100">{holding.ticker}</span><span className="ml-2 text-[10px] text-slate-500">{holding.label}</span></div><span className="font-mono text-xs text-cyan-200">{pct(holding.weight)}</span></div>)}</div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2"><p className="rounded-lg bg-slate-950/70 p-3 text-[10px] leading-relaxed text-slate-400"><b className="text-amber-200">Watch:</b> {starter.watch}</p><p className="rounded-lg bg-slate-950/70 p-3 text-[10px] leading-relaxed text-slate-500">Guided mapping is a fixed heuristic, not an assessment of personal circumstances. Model weights are examples; no trades are placed. The ranking objective follows the chosen starter plan.</p></div>
+      </section>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3"><label className="flex items-start gap-2 text-xs text-slate-300"><input type="checkbox" checked={includeAnalyst} onChange={(event) => setIncludeAnalyst(event.target.checked)} className="mt-0.5 accent-emerald-500" /><span><b>Include holdings-weighted analyst consensus</b><span className="mt-0.5 block text-[10px] text-slate-500">Optional extra stock-analyst provider lookups. Ranking uses it only when recommendations cover at least half of reported top-holdings weight.</span></span></label><div className="text-right text-[10px] text-slate-500">{loading ? "Scoring…" : data ? `${data.returned} ranked · ${data.eligible} screened` : "No score"}</div></div>
+      {data && <div className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="flex items-start gap-2 text-xs font-semibold text-slate-200"><ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />{data.goalDefinition.label}: {data.goalDefinition.description}</div><div className="mt-3 flex flex-wrap gap-2">{data.goalDefinition.weights.map((weight) => <span key={weight.metric} className="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[10px] text-slate-400">{weight.label} <b className="font-mono text-emerald-300">{(weight.w * 100).toFixed(0)}%</b></span>)}</div>{data.analystCoverage.requested && <p className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 text-[10px] leading-relaxed text-slate-400">Analyst score coverage: {data.analystCoverage.fundsWithUsableCoverage}/{data.analystCoverage.fundsScreened} screened funds meet the {pct(data.analystCoverage.minimumCoverage)} threshold ({pct(data.analystCoverage.coveragePct)} of funds). Consensus scale: 1 = strong buy, 5 = sell; lower ranks better. Funds below the threshold are scored without this metric, and their lower data coverage is shown per row.</p>}</div>}
+      {loading && !data ? <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">Loading transparent rankings…</div> : data?.ranked.length ? <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900"><div className="grid grid-cols-[36px_minmax(110px,1fr)_82px_90px] gap-2 border-b border-slate-800 bg-slate-950 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid-cols-[48px_minmax(150px,1fr)_100px_110px_130px]"><span>#</span><span>ETF</span><span className="text-right">Score</span><span className="text-right">Data coverage</span><span className="hidden text-right sm:block">3Y total return</span></div>{data.ranked.slice(0, 20).map((entry, index) => <div key={entry.row.ticker} className="grid grid-cols-[36px_minmax(110px,1fr)_82px_90px] items-center gap-2 border-b border-slate-800/80 px-4 py-3 last:border-0 sm:grid-cols-[48px_minmax(150px,1fr)_100px_110px_130px]"><span className="font-mono text-xs text-slate-500">{String(index + 1).padStart(2, "0")}</span><div className="min-w-0"><div className="font-mono text-xs font-bold text-white">{entry.row.ticker} <span className="ml-1 font-sans font-normal text-slate-400">{entry.row.name ?? ""}</span></div><div className="mt-1 text-[10px] text-slate-600">{entry.row.category ?? entry.row.assetClass}</div>{includeAnalyst && <div className="mt-1 text-[9px] text-cyan-300">Analyst: {entry.row.analystRec?.toFixed(2) ?? "N/A"} · top-holdings coverage {pct(entry.row.analystCoverage)}</div>}</div><div className="text-right font-mono text-sm font-bold text-emerald-300">{entry.score.toFixed(0)}</div><div className="text-right font-mono text-xs text-slate-300">{pct(entry.coverage)}</div><div className="hidden text-right font-mono text-xs text-slate-300 sm:block">{pct(entry.row.r3y)}</div></div>)}</div> : data && <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900 p-8 text-center text-xs text-slate-500">Not enough stored coverage to rank funds yet. Continue ETF hydration and try again.</div>}
       {data?.note && <p className="text-[10px] leading-relaxed text-slate-600">{data.note}</p>}
     </div>
   );
@@ -212,6 +260,7 @@ export function LiveResearchHub() {
       {active === "macro" && <MacroSignalsPanel />}
       {active === "news" && <NewsPanel />}
       {active === "recommend" && <RecommendPanel />}
+      {active === "similar" && <EtfSimilarityPanel />}
       {active === "sources" && <SourcesCoveragePanel />}
     </div>
   );

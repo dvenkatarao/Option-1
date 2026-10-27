@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { EDUCATIONAL_GUIDES } from '../../data/marketData';
 import { ETFData, WheelStock } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import {
   BookOpen,
   RotateCw,
@@ -39,6 +40,8 @@ export const ResearchAcademyView: React.FC<ResearchAcademyViewProps> = ({
           Master the mechanics of Options Wheel risk management, Delta strike selection, and ETF NAV erosion anatomy.
         </p>
       </div>
+
+      <IllustrativeDataNotice detail="Playbooks are general education, and the linked legacy ETF/wheel profiles plus earnings and ex-dividend radar use bundled examples—not current market calendars, quotes, or personalized recommendations. Use Live Research and Live Provider Scanner for source-backed data." />
 
       {/* Guide Tabs Selector */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -121,30 +124,30 @@ export const ResearchAcademyView: React.FC<ResearchAcademyViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
-            <span className="text-emerald-400 font-extrabold text-sm block">Delta (Δ) — Win Rate</span>
+            <span className="text-emerald-400 font-extrabold text-sm block">Delta (Δ) — OTM Proxy</span>
             <p className="text-slate-300 font-sans text-xs">
-              Represents probability of expiring In-The-Money. For Wheel puts, aim for <strong>0.18 - 0.25 Delta</strong> (approx 80% Win Rate / OTM probability).
+              For a short put, absolute delta is sometimes used as a rough model-based probability proxy. A 0.18–0.25 delta is a strategy convention; 1 − |delta| is only a rough OTM proxy, not a calibrated win rate or guarantee. Gaps, volatility changes, early assignment, and costs can dominate.
             </p>
           </div>
 
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
             <span className="text-cyan-300 font-extrabold text-sm block">Theta (θ) — Daily Cash Flow</span>
             <p className="text-slate-300 font-sans text-xs">
-              Daily dollar decay. Theta accelerates most between <strong>30 to 45 DTE</strong>, allowing fast 50% profit target exits without gamma risk.
+              Theta describes modeled time decay; it is nonlinear and interacts with price, volatility, and gamma. <strong>30–45 DTE</strong> is a common reference range, not a guarantee of quick profits or protection from tail risk.
             </p>
           </div>
 
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
             <span className="text-amber-400 font-extrabold text-sm block">IV Rank — Premium Richness</span>
             <p className="text-slate-300 font-sans text-xs">
-              Measures volatility vs past year. Target <strong>IV Rank 30% - 60%</strong> for rich option premiums with stable underlying fundamentals.
+              Compares current implied volatility with a historical range. Higher readings can coincide with richer premiums and higher risk; IV Rank is not a stand-alone sell signal, and provider coverage varies.
             </p>
           </div>
 
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
             <span className="text-purple-400 font-extrabold text-sm block">Gamma (Γ) — Tail Risk</span>
             <p className="text-slate-300 font-sans text-xs">
-              Rate of Delta change. Avoid selling options with <strong>&lt; 7 DTE</strong> where gamma spikes can cause violent rapid losses.
+              Rate of Delta change. Gamma often rises near expiration for at-the-money options, so small price moves can quickly change exposure. Short DTE is not inherently safe or unsafe; monitor assignment and tail risk.
             </p>
           </div>
         </div>
@@ -158,7 +161,7 @@ export const ResearchAcademyView: React.FC<ResearchAcademyViewProps> = ({
             <h3 className="text-base font-bold text-white">Earnings & Ex-Dividend Event Radar</h3>
           </div>
           <span className="text-xs font-mono font-bold text-slate-400">
-            Rule: Avoid selling Puts directly across earnings releases
+            Risk factor: Earnings can add gap risk; decisions are strategy-specific
           </span>
         </div>
 

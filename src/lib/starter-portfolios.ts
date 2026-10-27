@@ -70,9 +70,12 @@ export const STARTER_PORTFOLIOS: StarterPortfolio[] = [
 ];
 
 export function starterForAnswers(goal: string, horizon: string, risk: string): StarterPortfolio {
-  // Heuristic mapping: risk is strongest signal, then horizon, then goal
-  if (risk === "preserve" || horizon === "1-3") return STARTER_PORTFOLIOS[0];
+  // Heuristic mapping: preserve/short horizon wins first, then growth/long horizon, then goal preference.
+  if (risk === "preserve" || horizon === "1-3") return goal === "defensive" ? { ...STARTER_PORTFOLIOS[0], goal: "defensive" } : STARTER_PORTFOLIOS[0];
   if (risk === "grow" || horizon === "7+" || goal === "growth") return STARTER_PORTFOLIOS[2];
+  if (goal === "income") return STARTER_PORTFOLIOS[0];
+  if (goal === "defensive") return { ...STARTER_PORTFOLIOS[0], goal: "defensive" };
+  if (goal === "lowcost") return { ...STARTER_PORTFOLIOS[1], goal: "lowcost" };
   return STARTER_PORTFOLIOS[1];
 }
 

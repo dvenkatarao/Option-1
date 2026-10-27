@@ -18,6 +18,7 @@ import { LiveResearchHub } from './components/live/LiveResearchHub';
 import { LiveEtfScreenerView } from './components/live/LiveEtfScreenerView';
 import { LiveWheelView } from './components/live/LiveWheelView';
 import { ETF_DATASET } from './data/etfData';
+import { IllustrativeDataNotice } from './components/common/IllustrativeDataNotice';
 import { WHEEL_STOCKS, ACTIVE_CAMPAIGNS } from './data/wheelData';
 import { ETFData, WheelStock, OptionContract, ActiveWheelCampaign } from './types';
 import { Zap } from 'lucide-react';
@@ -128,6 +129,8 @@ export function App() {
                 Clear Search ✕
               </button>
             </div>
+
+            <IllustrativeDataNotice detail="Global ETF and wheel-stock search results use the bundled demonstration dataset; displayed prices, yields, and scores are not current quotes. Use the Live ETF Research or Live Provider Scanner views for source-backed market data." className="mb-3" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* ETFs Matched */}

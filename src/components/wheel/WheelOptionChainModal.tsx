@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { WheelStock, OptionContract } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import {
   X,
   Play,
@@ -53,7 +54,7 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Earnings Safety Indicator */}
+            {/* Example event-warning indicator */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono">
               <Calendar className="w-3.5 h-3.5 text-amber-400" />
               <span className="text-slate-400">Next Earnings:</span>
@@ -68,6 +69,8 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
             </button>
           </div>
         </div>
+
+        <IllustrativeDataNotice detail="The displayed stock quote, earnings date, IV, and option chain are bundled examples, not live quotes or an executable order book." className="mx-4 mt-3" />
 
         {/* Expiration Date Selector Tabs */}
         <div className="p-4 bg-slate-950/70 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -136,7 +139,7 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
                       Cash-Secured Puts (Phase 1 — Enter At a Discount)
                     </h3>
                     <span className="text-[11px] text-slate-400 font-mono">
-                      Target Delta: 0.15 - 0.25 (75-85% Probability of Profit)
+                      Sample delta: 0.15–0.25 · 1 − |delta| is a rough OTM proxy, not calibrated POP
                     </span>
                   </div>
 
@@ -149,10 +152,10 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
                           <th className="py-2.5 px-3 text-right">Premium</th>
                           <th className="py-2.5 px-3 text-right">Delta (Δ)</th>
                           <th className="py-2.5 px-3 text-right">Daily Theta</th>
-                          <th className="py-2.5 px-3 text-right">Prob of Profit (POP)</th>
-                          <th className="py-2.5 px-3 text-right">Downside Buffer</th>
+                          <th className="py-2.5 px-3 text-right">1 − |delta| OTM proxy %</th>
+                          <th className="py-2.5 px-3 text-right">Distance to breakeven</th>
                           <th className="py-2.5 px-3 text-right">Net Breakeven</th>
-                          <th className="py-2.5 px-3 text-right">Annualized ROC</th>
+                          <th className="py-2.5 px-3 text-right">Modeled annual ROC</th>
                           <th className="py-2.5 px-3 text-right">Action</th>
                         </tr>
                       </thead>
@@ -173,7 +176,7 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
                                   <span>${opt.strike.toFixed(2)}</span>
                                   {isRecommended && (
                                     <span className="text-[9px] bg-emerald-500 text-slate-950 font-extrabold px-1 py-0.2 rounded">
-                                      REC
+                                      SAMPLE
                                     </span>
                                   )}
                                 </div>
@@ -191,7 +194,7 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
                                 -${Math.abs(opt.theta * 100).toFixed(0)}/d
                               </td>
                               <td className="py-2.5 px-3 text-right font-bold text-slate-100">
-                                {opt.probabilityOfProfit}%
+                                ~{opt.probabilityOfProfit}%
                               </td>
                               <td className="py-2.5 px-3 text-right font-bold text-emerald-300">
                                 {opt.downsideBuffer}%
@@ -242,9 +245,9 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
                           <th className="py-2.5 px-3 text-right">Premium</th>
                           <th className="py-2.5 px-3 text-right">Delta (Δ)</th>
                           <th className="py-2.5 px-3 text-right">Daily Theta</th>
-                          <th className="py-2.5 px-3 text-right">Prob of Profit</th>
+                          <th className="py-2.5 px-3 text-right">1 − |delta| OTM proxy %</th>
                           <th className="py-2.5 px-3 text-right">Upside to Strike</th>
-                          <th className="py-2.5 px-3 text-right">Annualized ROC</th>
+                          <th className="py-2.5 px-3 text-right">Modeled annual ROC</th>
                           <th className="py-2.5 px-3 text-right">Action</th>
                         </tr>
                       </thead>
@@ -268,7 +271,7 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
                                 -${Math.abs(opt.theta * 100).toFixed(0)}/d
                               </td>
                               <td className="py-2.5 px-3 text-right font-bold text-slate-100">
-                                {opt.probabilityOfProfit}%
+                                ~{opt.probabilityOfProfit}%
                               </td>
                               <td className="py-2.5 px-3 text-right font-bold text-cyan-300">
                                 +{opt.downsideBuffer}%
@@ -306,7 +309,7 @@ export const WheelOptionChainModal: React.FC<WheelOptionChainModalProps> = ({
         {/* Footer */}
         <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs">
           <span className="text-slate-400">
-            Real-time Greeks calculated via Black-Scholes model.
+            Model Greeks use Black–Scholes on sample values; they are not live exchange quotes.
           </span>
           <button
             onClick={onClose}

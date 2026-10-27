@@ -54,6 +54,8 @@ export function toScreenRow(r: EtfRow, q: YahooQuote | undefined, rf: number | n
     priceRet3y: m.erosion.priceReturnAnn3y,
     capFunded: m.erosion.capitalFundedShare3y,
     divCagr3y: m.dividends.cagr3y,
+    analystRec: null,
+    analystCoverage: null,
     freq: m.dividends.frequency,
   };
 }

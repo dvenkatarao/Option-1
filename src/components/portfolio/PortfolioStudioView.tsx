@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ETFData, WheelStock } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import { PORTFOLIO_PRESETS, PortfolioPreset } from '../../data/marketData';
 import { simulatePortfolioGrowth } from '../../utils/financialMath';
 import {
@@ -129,35 +130,35 @@ export const PortfolioStudioView: React.FC<PortfolioStudioViewProps> = ({
     {
       id: 'sideways',
       title: 'Sideways / Flat Market (+0% SPX)',
-      description: 'Underlying equity is flat. High Theta decay from Wheel & Covered Calls generates huge alpha.',
-      portfolioOutcome: '+14.2% Net Cash Flow (Massive Alpha)',
+      description: 'The scenario applies preset option-credit and decay assumptions. This modeled cash flow is not evidence of alpha or a likely outcome.',
+      portfolioOutcome: '+14.2% modeled cash flow',
       benchmarkOutcome: '0.0% Gain',
       isPositiveAlpha: true,
-      badge: 'Wheel Superpower',
+      badge: 'Illustrative case',
     },
     {
       id: 'correction',
       title: 'Market Pullback (-15%)',
-      description: 'Stock prices decline. 0.20 delta put buffer (5-8% downside protection) plus premium credits cushions losses.',
-      portfolioOutcome: '-6.4% Drawdown (60% Cushion vs SPX)',
+      description: 'Put options can incur substantial losses below the strike; this preset scenario assumes credits partly offset the market decline.',
+      portfolioOutcome: '-6.4% modeled portfolio outcome',
       benchmarkOutcome: '-15.0% Loss',
       isPositiveAlpha: true,
-      badge: 'Buffer Shield',
+      badge: 'Preset assumptions',
     },
     {
       id: 'vix_spike',
       title: 'High Volatility Spike (VIX > 35)',
-      description: 'Implied volatility surges. Option premiums skyrocket, allowing 25-35% annualized ROC entry points.',
-      portfolioOutcome: '+22.8% Annualized Cash Flow Surge',
-      benchmarkOutcome: '-12.0% Volatility',
+      description: 'Implied volatility and option premiums may rise alongside risk and collateral needs; the output below is a fixed sensitivity assumption.',
+      portfolioOutcome: '+22.8% modeled annual cash-flow rate',
+      benchmarkOutcome: '-12.0% benchmark scenario',
       isPositiveAlpha: true,
-      badge: 'Premium Bonanza',
+      badge: 'Illustrative case',
     },
     {
       id: 'bull_rally',
       title: 'Mega Bull Market (+25%)',
-      description: 'Equities surge. ETF bucket captures full upside, covered calls capped at strike plus premium.',
-      portfolioOutcome: '+19.5% Strong Total Gain',
+      description: 'The model assumes ETF participation while covered calls can cap gains above the strike; actual results depend on the path and instruments.',
+      portfolioOutcome: '+19.5% modeled total return',
       benchmarkOutcome: '+25.0% Index Gain',
       isPositiveAlpha: false,
       badge: 'Capped Upside',
@@ -180,7 +181,7 @@ export const PortfolioStudioView: React.FC<PortfolioStudioViewProps> = ({
 
         <div className="flex items-center gap-3 font-mono text-xs">
           <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
-            <span className="text-slate-400">Blended Annual Return:</span>
+            <span className="text-slate-400">Modeled blended return:</span>
             <span className="text-emerald-400 font-extrabold ml-1.5">~{blendedAnnualReturn}%</span>
           </div>
           <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
@@ -189,6 +190,8 @@ export const PortfolioStudioView: React.FC<PortfolioStudioViewProps> = ({
           </div>
         </div>
       </div>
+
+      <IllustrativeDataNotice detail="Portfolio growth, cash-flow, yield, and options-wheel inputs are fixed scenario assumptions (including 3.8% ETF yield, 7% ETF growth, 18.5% wheel ROC, and a 10% benchmark return) paired with bundled examples. These simulations are not forecasts, current provider quotes, or account performance." />
 
       {/* Preset Strategy Cards */}
       <div className="space-y-2">
@@ -225,8 +228,8 @@ export const PortfolioStudioView: React.FC<PortfolioStudioViewProps> = ({
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-400">Target Annual Yield:</span>
-                  <span className="text-emerald-400 font-extrabold text-sm">~{preset.expectedAnnualYield}%</span>
+                  <span className="text-slate-400">Example annual-yield assumption:</span>
+                  <span className="text-emerald-400 font-extrabold text-sm">~{preset.exampleAnnualYieldAssumption}%</span>
                 </div>
               </div>
             );
@@ -242,7 +245,7 @@ export const PortfolioStudioView: React.FC<PortfolioStudioViewProps> = ({
             Step 2: Customize Capital Allocation & Engine Split
           </h2>
           <span className="text-xs font-mono text-cyan-300 font-bold">
-            Projected Monthly Cash: ${monthlyCashFlowProjected.toLocaleString()}/mo
+            Modeled monthly cash flow: ${monthlyCashFlowProjected.toLocaleString()}/mo
           </span>
         </div>
 
@@ -375,7 +378,7 @@ export const PortfolioStudioView: React.FC<PortfolioStudioViewProps> = ({
               <RotateCw className="w-5 h-5 text-cyan-400" />
               <div>
                 <h3 className="text-sm font-bold text-white">Engine 2: Options Wheel Cash Reserve</h3>
-                <span className="text-[11px] text-slate-400">Active High-Velocity Cash Flow (18-24% ROC)</span>
+                <span className="text-[11px] text-slate-400">Illustrative premium-cash-flow assumption (editable scenario)</span>
               </div>
             </div>
             <span className="text-sm font-mono font-bold text-cyan-400">
@@ -564,7 +567,7 @@ export const PortfolioStudioView: React.FC<PortfolioStudioViewProps> = ({
               </div>
 
               <div className="mt-4 pt-2.5 border-t border-slate-800/80 font-mono text-xs">
-                <div className="text-[10px] text-slate-400">Portfolio Return:</div>
+                <div className="text-[10px] text-slate-400">Illustrative scenario output:</div>
                 <div
                   className={`font-bold ${
                     scen.portfolioOutcome.includes('+') ? 'text-emerald-400' : 'text-amber-400'

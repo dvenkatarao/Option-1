@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ETFData, ETFStrategyType } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import {
   Layers,
   Search,
@@ -170,6 +171,8 @@ export const ETFScreenerView: React.FC<ETFScreenerViewProps> = ({
           </div>
         </div>
       </div>
+
+      <IllustrativeDataNotice detail="This legacy screener is backed by the bundled demonstration dataset. Prices, yields, holdings, NAV-health scores, and performance are not current provider quotes; use the Live ETF Research tab for sourced data." />
 
       {/* Category Pills Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">

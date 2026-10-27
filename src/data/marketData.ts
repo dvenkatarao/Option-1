@@ -16,7 +16,7 @@ export interface PortfolioPreset {
   riskProfile: 'Conservative Income' | 'Balanced Growth & Income' | 'Maximum Cash Flow Engine';
   etfAllocationPercent: number;
   wheelAllocationPercent: number;
-  expectedAnnualYield: number; // %
+  exampleAnnualYieldAssumption: number; // %
   description: string;
   recommendedETFs: { symbol: string; weight: number; rationale: string }[];
   recommendedWheelStocks: { symbol: string; weight: number; rationale: string }[];
@@ -25,61 +25,61 @@ export interface PortfolioPreset {
 export const PORTFOLIO_PRESETS: PortfolioPreset[] = [
   {
     id: 'balanced-growth-income',
-    name: 'The Dual-Engine Growth & Wheel',
-    tagline: '50% ETF Foundation + 50% Active Wheel Cash Flow',
+    name: 'Balanced ETF + Wheel Example',
+    tagline: '50% ETF foundation + 50% wheel scenario',
     riskProfile: 'Balanced Growth & Income',
     etfAllocationPercent: 50,
     wheelAllocationPercent: 50,
-    expectedAnnualYield: 14.8,
-    description: 'The premier architecture for personal wealth: Core equity compounding via VOO and SCHD while utilizing cash-secured puts on AAA stalwarts (MSFT, GOOGL, NVDA) to generate 18-24% options cash flow.',
+    exampleAnnualYieldAssumption: 14.8,
+    description: 'An illustrative mix of broad-market and dividend ETFs with cash-secured puts. Option premiums vary, assignment can create equity losses, and the model percentages are assumptions—not forecasts.',
     recommendedETFs: [
-      { symbol: 'VOO', weight: 40, rationale: 'Foundational US market growth anchor with zero NAV erosion' },
-      { symbol: 'SCHD', weight: 30, rationale: '11% dividend growth and recession dampener' },
-      { symbol: 'QQQM', weight: 30, rationale: 'Tech & innovation compounding engine' },
+      { symbol: 'VOO', weight: 40, rationale: 'Broad US large-cap exposure; market prices and total returns can decline.' },
+      { symbol: 'SCHD', weight: 30, rationale: 'Dividend-oriented equity exposure; distributions and drawdowns are not guaranteed.' },
+      { symbol: 'QQQM', weight: 30, rationale: 'Growth-oriented exposure with meaningful sector concentration and volatility.' },
     ],
     recommendedWheelStocks: [
-      { symbol: 'MSFT', weight: 35, rationale: 'AAA balance sheet with strong support at 400 strike' },
-      { symbol: 'GOOGL', weight: 35, rationale: '22x P/E undervaluation discount with 82% POP' },
-      { symbol: 'AAPL', weight: 30, rationale: 'Unstoppable share buybacks providing downside protection' },
+      { symbol: 'MSFT', weight: 35, rationale: 'Illustrative put candidate only; assignment and stock losses remain possible.' },
+      { symbol: 'GOOGL', weight: 35, rationale: 'Valuation and delta are not reliable measures of future return or win rate.' },
+      { symbol: 'AAPL', weight: 30, rationale: 'Illustrative company selection; buybacks do not prevent market losses.' },
     ],
   },
   {
     id: 'high-cashflow-income',
-    name: 'Retirement Cash-Flow Accelerator',
-    tagline: '30% Covered Call ETFs + 70% Options Wheel',
+    name: 'Income-Oriented Scenario Example',
+    tagline: '30% covered-call ETFs + 70% wheel scenario',
     riskProfile: 'Maximum Cash Flow Engine',
     etfAllocationPercent: 30,
     wheelAllocationPercent: 70,
-    expectedAnnualYield: 18.5,
-    description: 'Designed for financial independence and high recurring monthly income. Pairs JEPI/DIVO for hands-off 6-8% monthly dividends with an active 0.20-0.25 delta Cash-Secured Put engine across high-moat blue chips.',
+    exampleAnnualYieldAssumption: 18.5,
+    description: 'This high-cash-flow scenario combines covered-call funds and cash-secured puts. Distribution rates are not total returns; options can be assigned and expose the account to losses.',
     recommendedETFs: [
-      { symbol: 'JEPI', weight: 40, rationale: '7.4% monthly distribution with lower beta' },
-      { symbol: 'DIVO', weight: 35, rationale: 'Prudent tactical calls with dividend growth' },
-      { symbol: 'SGOV', weight: 25, rationale: '4.9% risk-free yield for collateral reserves' },
+      { symbol: 'JEPI', weight: 40, rationale: 'Covered-call fund example; distributions, total returns, and volatility vary.' },
+      { symbol: 'DIVO', weight: 35, rationale: 'Actively managed covered-call example; outcomes depend on strategy and market path.' },
+      { symbol: 'SGOV', weight: 25, rationale: 'Short Treasury exposure; yield changes and interest-rate risk remains.' },
     ],
     recommendedWheelStocks: [
-      { symbol: 'NVDA', weight: 30, rationale: 'High IV yielding 28%+ annualized ROC on 0.20 delta' },
-      { symbol: 'AMZN', weight: 35, rationale: 'AWS cloud margin expansion and rich option liquidity' },
-      { symbol: 'CAT', weight: 35, rationale: 'Infrastructure tailwinds and stable industrial cash flow' },
+      { symbol: 'NVDA', weight: 30, rationale: 'Higher implied volatility may raise premium and risk; annualized ROC is not expected return.' },
+      { symbol: 'AMZN', weight: 35, rationale: 'Illustrative put candidate; company and options risks remain.' },
+      { symbol: 'CAT', weight: 35, rationale: 'Illustrative put candidate; cyclical equity and assignment risks remain.' },
     ],
   },
   {
     id: 'conservative-fortress',
-    name: 'Fortress Capital Preservation & Yield',
-    tagline: '75% Core Dividend Aristocrats + 25% Ultra-Safe Puts',
+    name: 'Conservative Allocation Example',
+    tagline: '75% core ETFs + 25% cash-secured put scenario',
     riskProfile: 'Conservative Income',
     etfAllocationPercent: 75,
     wheelAllocationPercent: 25,
-    expectedAnnualYield: 9.2,
-    description: 'Prioritizes maximum capital preservation and sleep-at-night security. Heavy weighting in SCHD, VIG, and SGOV, paired with ultra-low 0.12 delta puts on AAA-rated dividend aristocrats.',
+    exampleAnnualYieldAssumption: 9.2,
+    description: 'An illustrative conservative mix of equity, Treasury, and options exposure. It is not capital-protected: bonds and stocks can fall, and puts can incur substantial losses.',
     recommendedETFs: [
-      { symbol: 'SCHD', weight: 40, rationale: 'High dividend growth with zero NAV decay' },
-      { symbol: 'VIG', weight: 35, rationale: 'Aristocrats with 10+ years consecutive hikes' },
-      { symbol: 'SGOV', weight: 25, rationale: 'US Treasury safety and liquidity' },
+      { symbol: 'SCHD', weight: 40, rationale: 'Dividend-oriented equity exposure; NAV and distributions can decline.' },
+      { symbol: 'VIG', weight: 35, rationale: 'Dividend-growth strategy example; historical raises do not guarantee future payments.' },
+      { symbol: 'SGOV', weight: 25, rationale: 'Short Treasury exposure; liquidity and principal value vary with market conditions.' },
     ],
     recommendedWheelStocks: [
-      { symbol: 'JNJ', weight: 50, rationale: 'AAA credit rating, 62-year dividend streak' },
-      { symbol: 'KO', weight: 50, rationale: 'Recession-proof staple with low collateral requirement' },
+      { symbol: 'JNJ', weight: 50, rationale: 'Illustrative put candidate; credit quality does not eliminate equity or assignment risk.' },
+      { symbol: 'KO', weight: 50, rationale: 'Consumer-staples exposure; no sector is recession-proof and collateral depends on price.' },
     ],
   },
 ];
@@ -97,53 +97,46 @@ export interface EducationalGuide {
 export const EDUCATIONAL_GUIDES: EducationalGuide[] = [
   {
     id: 'guide-wheel-mastery',
-    title: 'The Options Wheel Strategy: Complete Blueprint for US Blue-Chips',
+    title: 'The Options Wheel: Mechanics, Assignment & Risk',
     category: 'Wheel Strategy',
     readTime: '6 min read',
-    summary: 'Master the 4-phase systematic income machine that turns volatile markets into consistent 15-25% cash flow without ever shorting stock or guessing market direction.',
+    summary: 'Learn how cash-secured puts and covered calls work, including assignment, break-even, and downside risk. The wheel is not a reliable-income formula or a guarantee.',
     keyTakeaways: [
-      'Phase 1: Sell Cash-Secured Puts (CSP) on high-quality, undervalued blue-chips you want to own long term at 0.20 - 0.25 Delta (75-80% Win Rate) with 30-45 DTE.',
-      'Phase 2: If put expires OTM, keep 100% of premium. Close at 50% profit to increase annualized ROC.',
-      'Phase 3: If assigned, buy 100 shares at strike price. Your actual net cost basis is Strike Price minus Put Premium collected.',
-      'Phase 4: Sell Covered Calls (CC) at or above your net cost basis. Collect second stream of premium plus any upside stock appreciation and dividends.',
-      'Golden Rule: NEVER wheel a junk/meme stock for high IV. Only wheel stocks with wide economic moats and pristine balance sheets.',
+      "A cash-secured put seller can be assigned at the strike. Use only collateral and underlyings you can hold through losses; delta is a model-dependent proxy, not a measured win rate.",
+      "If the put expires worthless, the seller keeps the credit before costs. A 50% exit target is a trading rule, not evidence that closing or rolling improves outcomes.",
+      "If assigned, shares are purchased at the strike. Premium affects the economic basis, but costs, taxes, and later price moves also matter.",
+      "A covered-call writer may be assigned and give up gains above the strike; the shares still carry downside risk, and dividends are not guaranteed.",
+      "Company labels or balance-sheet screens cannot remove equity, liquidity, volatility, or assignment risk. Do not sell an option unless you understand its obligations.",
     ],
-    content: `The Wheel Strategy is one of the most effective mechanical options methods for personal wealth building when paired with the discipline of value investing. By selling options outside the money, time decay (Theta) becomes your primary profit generator.
-
-Choosing the right strike is critical:
-• Delta 0.15 - 0.20: Conservative (80-85% Probability of Profit). Great for large accounts seeking steady 12-18% annualized ROC.
-• Delta 0.25 - 0.30: Balanced (70-75% Probability of Profit). Generates 20-30% annualized ROC while leaving a 4-8% downside safety buffer.
-• Days to Expiration (DTE): 30 to 45 days captures the accelerated slope of the theta decay curve without taking on binary same-week gamma risk.`,
+    content: `Selling a cash-secured put earns a credit in exchange for accepting the obligation to buy shares at the strike if assigned. A sharp price decline can produce losses far greater than the premium. If shares are assigned, a covered call can generate another credit but limits some gains above its strike while leaving the shares exposed to losses.\n\nDelta is a model output, not an observed win rate; its probability interpretation depends on model assumptions and market inputs. Days to expiration, volatility, liquidity, early assignment, dividends, fees, taxes, and the price path all affect outcomes. Annualizing one option credit does not make it an expected or repeatable return. Paper-test with realistic quotes and adverse scenarios before considering any trade.`,
   },
   {
     id: 'guide-nav-erosion',
-    title: 'NAV Erosion Decoded: Synthetic Yield Traps vs Organic Dividend Growth',
+    title: 'Distribution Yield, NAV & Total Return',
     category: 'Risk & NAV Erosion',
     readTime: '8 min read',
-    summary: 'Why headline 30-60% yields in single-stock synthetic covered call ETFs (e.g. YieldMax, QYLD) often destroy investor wealth, and how to spot structural NAV decay before investing.',
+    summary: 'Separate a fund’s distribution rate from its investment return. Covered-call outcomes, NAV changes, and distribution policies vary by fund and market path.',
     keyTakeaways: [
-      'The Covered Call Capping Asymmetry: Synthetic ETFs sell ATM calls which cap 100% of underlying gains during market rallies, but suffer 100% of the downside during crashes.',
-      'Over time, this asymmetry forces the fund Net Asset Value (NAV) into a downward staircase pattern: down in corrections, unable to recover in bull markets.',
-      'Return of Capital (ROC) distributions: When a fund pays out your own principal as "yield", it triggers permanent reverse-compounding.',
-      'True Total Return Formula: Price Return + Reinvested Dividends minus Expense Drag. Compare total return to S&P 500 (VOO) before chasing nominal yield percentages.',
-      'Safe Covered Call Alternatives: Choose funds with OTM call writing (JEPI, JEPQ) or tactical rules (DIVO) that preserve capital growth.',
+      "Covered calls can limit gains above their strike but do not eliminate downside; strategies and option coverage differ across funds.",
+      "NAV reflects the fund’s holdings and strategy. Its path depends on market returns, volatility, distributions, fees, and implementation; no single pattern is inevitable.",
+      "A distribution’s tax classification, including return of capital, cannot be inferred from its headline yield. Review fund tax documents and distinguish cash paid from total return.",
+      "Compare NAV or price change plus distributions on a consistent reinvestment basis; fund expenses are reflected in reported performance. Match the benchmark to the fund’s objective and risk.",
+      "No covered-call structure guarantees safety or capital growth. Review each fund’s prospectus, option strategy, distribution history, and total-return record.",
     ],
-    content: `Many retail investors fall victim to the "Yield Trap". A fund advertising a 50% distribution rate seems irresistible. However, if the share price drops by 40% in the same year, your net total return is severely impaired.
-
-When analyzing any income ETF, always check the 3-Year Total Return vs Price Return index. In funds like VOO or SCHD, total return exceeds price return because the NAV continues to appreciate while paying sustainable dividends. In contrast, heavy synthetic covered call funds show steady downward sloping price charts requiring immediate full reinvestment just to break even.`,
+    content: `A distribution rate is not an investment return. For example, a hypothetical fund can distribute cash while its NAV falls; the combined result may be negative even when the cash distribution appears large. Conversely, price and distribution outcomes can vary substantially across strategies and periods.\n\nCompare NAV or price changes together with distributions using a consistent reinvestment basis, and consider fees, volatility, drawdowns, and the fund’s stated objective. Do not infer return of capital from yield alone; check official distribution and tax materials. Past performance does not predict future results.`,
   },
   {
     id: 'guide-tax-optimization',
-    title: 'Tax Optimization for Wheelers & ETF Investors (US IRS Section 1256 & Roth IRAs)',
+    title: 'Tax Considerations for Options & ETF Investors',
     category: 'Tax Strategy',
     readTime: '5 min read',
-    summary: 'How to maximize after-tax returns on cash-secured puts, covered calls, and dividend distributions in taxable vs tax-advantaged accounts.',
+    summary: 'General U.S. tax concepts for options and fund distributions. Treatment depends on the instrument, account, holding period, and individual circumstances; this is not tax advice.',
     keyTakeaways: [
-      'Roth IRA Advantage: Options wheel premiums and high-yield ETF distributions compound 100% tax-free with zero capital gains tax at withdrawal.',
-      'Section 1256 Index Contracts: Index options (SPX, NDX) and funds like SPYI benefit from the 60% Long-Term / 40% Short-Term capital gains blend regardless of holding period.',
-      'Qualified Dividends: Traditional dividend ETFs (VOO, SCHD, VIG) are taxed at preferential long-term capital gains rates (0%, 15%, or 20%) rather than ordinary income.',
-      'Covered Call Tax Straddle Rules: Be cautious when writing in-the-money (ITM) covered calls in taxable accounts as they may suspend the holding period for qualified dividend status.',
+      "Tax-advantaged account rules vary. Contributions, eligible trades, and withdrawals are subject to account-specific requirements, limits, and potential taxes or penalties.",
+      "Section 1256 treatment applies only to qualifying contracts; it should not be assumed for an ETF, its distributions, or every index-linked instrument. Confirm classification with a tax professional.",
+      "A fund distribution is not automatically a qualified dividend. Tax character, holding-period rules, and the investor’s tax bracket affect treatment.",
+      "Options, straddles, and in-the-money covered calls can affect holding periods and tax treatment. Keep trade and distribution records and seek instrument-specific tax guidance.",
     ],
-    content: `Executing the Wheel Strategy inside a Roth IRA or Self-Directed 401(k) provides the holy grail of financial independence: tax-free compounding of high-velocity options income. If wheeling inside a taxable brokerage account, prioritize index-level instruments or pair your wheeling with broad index ETFs to balance short-term ordinary income with long-term unrealized capital growth.`,
+    content: `Options premiums and fund distributions may receive different tax treatment depending on the contract, fund reporting, account type, holding period, and taxpayer circumstances. Tax-advantaged accounts also have eligibility, contribution, trading, and withdrawal rules. Keep statements and official tax forms, and consult a qualified tax professional before relying on a strategy’s assumed tax outcome.`,
   },
 ];

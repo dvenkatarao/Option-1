@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { WheelStock, OptionContract } from '../../types';
+import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import { computeWheelCycleMetrics, generatePayoffCurve } from '../../utils/financialMath';
 import {
   RotateCw,
@@ -57,7 +58,7 @@ export const WheelSimulatorView: React.FC<WheelSimulatorViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<'flow' | 'payoff' | 'basis_table'>('flow');
 
-  // Compute live cycle metrics
+  // Compute scenario cycle metrics from editable/sample inputs
   const metrics = computeWheelCycleMetrics({
     stock: currentStock,
     putStrike,
@@ -145,7 +146,9 @@ export const WheelSimulatorView: React.FC<WheelSimulatorViewProps> = ({
         </div>
       </div>
 
-      {/* Top Controls Grid: Live Parameters Input */}
+      <IllustrativeDataNotice detail="The selected stock and starting option values come from the bundled sample dataset. Calculated outcomes are educational scenarios using your assumptions—not live option prices, expected returns, or broker fills." />
+
+      {/* Top Controls Grid: Scenario Parameters Input */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
@@ -323,7 +326,7 @@ export const WheelSimulatorView: React.FC<WheelSimulatorViewProps> = ({
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400">
-                <span className="text-emerald-400 font-semibold">Scenario A:</span> If expires OTM, keep ${metrics.putIncome} profit & repeat!
+                <span className="text-emerald-400 font-semibold">Scenario A:</span> If the put expires OTM, the model keeps ${metrics.putIncome} premium; assignment, fees, and market moves can change realized results.
               </div>
             </div>
 
@@ -404,11 +407,11 @@ export const WheelSimulatorView: React.FC<WheelSimulatorViewProps> = ({
               </div>
               <div>
                 <span className="text-[11px] font-mono font-bold uppercase text-emerald-400 block mb-1">
-                  Phase 4: Full Cycle ROI
+                  Phase 4: Example cycle summary
                 </span>
-                <h3 className="text-base font-bold text-white">Shares Called Away / Win</h3>
+                <h3 className="text-base font-bold text-white">Shares Called Away / Scenario</h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Capital is unlocked at a massive profit. Re-enter Phase 1 and restart the wheel.
+                  If the call is assigned above its strike, the modeled cycle closes. Results depend on price path and your inputs; fees, taxes, slippage, and all market risks are not fully modeled.
                 </p>
 
                 <div className="mt-4 space-y-2 font-mono text-xs bg-slate-950/90 p-3 rounded-xl border border-emerald-800/40">
@@ -428,7 +431,7 @@ export const WheelSimulatorView: React.FC<WheelSimulatorViewProps> = ({
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">Annualized ROI:</span>
+                <span className="text-slate-400">Modeled annualized return:</span>
                 <span className="text-emerald-400 font-extrabold text-sm">{metrics.totalAnnualizedROI}%/yr</span>
               </div>
             </div>
