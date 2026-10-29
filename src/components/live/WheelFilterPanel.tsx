@@ -1,12 +1,44 @@
+import { ChevronDown } from "lucide-react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import type { WheelFilterState } from "./wheel-filter-state";
 
 const inputClass = "w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500/60";
-const rangeClass = "mt-2 w-full cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-40";
+const rangeClass = "mt-1.5 w-full cursor-pointer accent-cyan-400";
 
 function boundedNumber(value: string, min: number, max: number, fallback: number) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+      {label}
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={inputClass + " mt-1"}
+      />
+    </label>
+  );
 }
 
 function SliderField({
@@ -19,7 +51,6 @@ function SliderField({
   onChange,
   minLabel,
   maxLabel,
-  disabled = false,
 }: {
   label: string;
   value: number;
@@ -30,13 +61,12 @@ function SliderField({
   onChange: (value: string) => void;
   minLabel: string;
   maxLabel: string;
-  disabled?: boolean;
 }) {
   return (
-    <label className={`block rounded-lg border border-slate-800 bg-slate-950/70 p-3 ${disabled ? "opacity-70" : ""}`}>
-      <span className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+    <label className="block rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+      <span className="flex items-center justify-between gap-3 text-[9px] font-semibold uppercase tracking-wider text-slate-400">
         <span>{label}</span>
-        <output className="font-mono text-xs font-bold normal-case tracking-normal text-cyan-200">{disabled ? "No cap" : valueLabel}</output>
+        <output className="font-mono text-[10px] font-bold normal-case tracking-normal text-cyan-200">{valueLabel}</output>
       </span>
       <input
         type="range"
@@ -44,12 +74,11 @@ function SliderField({
         max={max}
         step={step}
         value={value}
-        disabled={disabled}
         aria-label={label}
         onChange={(event) => onChange(event.target.value)}
         className={rangeClass}
       />
-      <span className="mt-1 flex justify-between text-[9px] text-slate-600"><span>{minLabel}</span><span>{maxLabel}</span></span>
+      <span className="mt-0.5 flex justify-between text-[8px] text-slate-600"><span>{minLabel}</span><span>{maxLabel}</span></span>
     </label>
   );
 }
@@ -63,7 +92,6 @@ function RangeSliderField({
   step,
   onChange,
   formatValue,
-  hint,
 }: {
   label: string;
   minValue: string;
@@ -73,7 +101,6 @@ function RangeSliderField({
   step: number;
   onChange: (minValue: string, maxValue: string) => void;
   formatValue: (value: number) => string;
-  hint: string;
 }) {
   const low = boundedNumber(minValue, min, max, min);
   const high = boundedNumber(maxValue, min, max, max);
@@ -85,19 +112,18 @@ function RangeSliderField({
   };
 
   return (
-    <fieldset className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
-      <legend className="px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</legend>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-[9px] text-slate-500">
-          <span className="flex items-center justify-between gap-2">Minimum <output className="font-mono text-cyan-200">{formatValue(low)}</output></span>
+    <fieldset className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+      <legend className="px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">{label}</legend>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block text-[8px] text-slate-500">
+          <span className="flex items-center justify-between gap-1">Min <output className="font-mono text-cyan-200">{formatValue(low)}</output></span>
           <input type="range" min={min} max={max} step={step} value={low} aria-label={`Minimum ${label}`} onChange={(event) => update("min", event.target.value)} className={rangeClass} />
         </label>
-        <label className="block text-[9px] text-slate-500">
-          <span className="flex items-center justify-between gap-2">Maximum <output className="font-mono text-cyan-200">{formatValue(high)}</output></span>
+        <label className="block text-[8px] text-slate-500">
+          <span className="flex items-center justify-between gap-1">Max <output className="font-mono text-cyan-200">{formatValue(high)}</output></span>
           <input type="range" min={min} max={max} step={step} value={high} aria-label={`Maximum ${label}`} onChange={(event) => update("max", event.target.value)} className={rangeClass} />
         </label>
       </div>
-      <p className="mt-1 text-[9px] leading-relaxed text-slate-600">{hint}</p>
     </fieldset>
   );
 }
@@ -126,6 +152,10 @@ export function WheelFilterPanel({
     ...(filterValues.sector !== "all" ? [filterValues.sector] : []),
   ])].sort((a, b) => a.localeCompare(b));
   const maxCollateral = boundedNumber(filterValues.maxCollateral, 10_000, 100_000, 50_000);
+  const summaryDteMin = boundedNumber(filterValues.dteMin, 7, 70, 21);
+  const summaryDteMax = boundedNumber(filterValues.dteMax, 7, 70, 50);
+  const summaryDeltaMin = boundedNumber(filterValues.deltaMin, 0.01, 0.5, 0.15);
+  const summaryDeltaMax = boundedNumber(filterValues.deltaMax, 0.01, 0.5, 0.3);
 
   return (
     <form onSubmit={onSubmit} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -194,89 +224,76 @@ export function WheelFilterPanel({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <RangeSliderField
-          label="Days to expiration"
-          minValue={filterValues.dteMin}
-          maxValue={filterValues.dteMax}
-          min={7}
-          max={70}
-          step={1}
-          formatValue={(value) => `${value}d`}
-          onChange={(minValue, maxValue) => updateRange("dteMin", "dteMax", minValue, maxValue)}
-          hint="Matches the DTE window used by automatic option-chain scans."
-        />
-        <RangeSliderField
-          label="Absolute put delta"
-          minValue={filterValues.deltaMin}
-          maxValue={filterValues.deltaMax}
-          min={0.01}
-          max={0.5}
-          step={0.01}
-          formatValue={(value) => value.toFixed(2)}
-          onChange={(minValue, maxValue) => updateRange("deltaMin", "deltaMax", minValue, maxValue)}
-          hint="Provider scans store puts through 0.50 absolute delta."
-        />
-        <SliderField
-          label="Minimum score"
-          value={boundedNumber(filterValues.minScore, 0, 100, 15)}
-          min={0}
-          max={100}
-          step={1}
-          valueLabel={filterValues.minScore}
-          minLabel="0"
-          maxLabel="100"
-          onChange={(value) => update("minScore", value)}
-        />
-        <SliderField
-          label="Maximum bid/ask spread"
-          value={boundedNumber(filterValues.maxSpread, 1, 100, 10)}
-          min={1}
-          max={100}
-          step={1}
-          valueLabel={`${filterValues.maxSpread}%`}
-          minLabel="1%"
-          maxLabel="100%"
-          onChange={(value) => update("maxSpread", value)}
-        />
-        <SliderField
-          label="Minimum annualized ROC"
-          value={boundedNumber(filterValues.minReturn, 0, 500, 8)}
-          min={0}
-          max={500}
-          step={1}
-          valueLabel={`${filterValues.minReturn}%`}
-          minLabel="0%"
-          maxLabel="500%"
-          onChange={(value) => update("minReturn", value)}
-        />
-        <fieldset className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
-          <legend className="px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cash secured per contract</legend>
-          <label className="flex items-center gap-2 text-[10px] text-slate-300">
-            <input type="checkbox" checked={filterValues.maxCollateralEnabled} onChange={(event) => update("maxCollateralEnabled", event.target.checked)} className="accent-emerald-500" />
-            Apply maximum collateral cap
-          </label>
-          <div className="mt-2">
-            <SliderField
-              label="Maximum collateral"
-              value={maxCollateral}
-              min={10_000}
-              max={100_000}
-              step={2_500}
-              valueLabel={`$${maxCollateral.toLocaleString("en-US")}`}
-              minLabel="$10k"
-              maxLabel="$100k"
-              onChange={(value) => update("maxCollateral", value)}
-              disabled={!filterValues.maxCollateralEnabled}
-            />
-          </div>
-          <p className="mt-2 text-[9px] leading-relaxed text-slate-600">The cap is applied to each contract before ranking alternatives for a ticker.</p>
-        </fieldset>
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-          <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.earnings} onChange={(event) => update("earnings", event.target.checked)} className="accent-emerald-500" />Allow expiration on/after earnings</label>
-          <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.trend} onChange={(event) => update("trend", event.target.checked)} className="accent-emerald-500" />Require above 200-day SMA</label>
-          <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.dividendOnly} onChange={(event) => update("dividendOnly", event.target.checked)} className="accent-emerald-500" />Dividend stocks only</label>
+      <div className="mt-4 grid items-start gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <NumberField label="Minimum score" value={filterValues.minScore} min={0} max={100} step={1} onChange={(value) => update("minScore", value)} />
+        <NumberField label="Maximum bid/ask spread · %" value={filterValues.maxSpread} min={1} max={100} step={1} onChange={(value) => update("maxSpread", value)} />
+        <NumberField label="Minimum annualized ROC · %" value={filterValues.minReturn} min={0} max={500} step={1} onChange={(value) => update("minReturn", value)} />
+      </div>
+
+      <details className="group mt-3 rounded-xl border border-slate-800 bg-slate-950/40">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-950/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0">
+            <span className="block text-[10px] font-bold text-slate-200">Range filters</span>
+            <span className="mt-0.5 block truncate text-[9px] text-slate-500 sm:whitespace-normal">
+              DTE {summaryDteMin}–{summaryDteMax}d · |Δ| {summaryDeltaMin.toFixed(2)}–{summaryDeltaMax.toFixed(2)} · Cash cap {filterValues.maxCollateralEnabled ? `$${maxCollateral.toLocaleString("en-US")}` : "off"}
+            </span>
+          </span>
+          <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="grid items-start gap-2 border-t border-slate-800 p-2 sm:grid-cols-2 xl:grid-cols-3">
+          <RangeSliderField
+            label="Days to expiration"
+            minValue={filterValues.dteMin}
+            maxValue={filterValues.dteMax}
+            min={7}
+            max={70}
+            step={1}
+            formatValue={(value) => `${value}d`}
+            onChange={(minValue, maxValue) => updateRange("dteMin", "dteMax", minValue, maxValue)}
+          />
+          <RangeSliderField
+            label="Absolute put delta"
+            minValue={filterValues.deltaMin}
+            maxValue={filterValues.deltaMax}
+            min={0.01}
+            max={0.5}
+            step={0.01}
+            formatValue={(value) => value.toFixed(2)}
+            onChange={(minValue, maxValue) => updateRange("deltaMin", "deltaMax", minValue, maxValue)}
+          />
+          <fieldset className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+            <legend className="px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Cash secured per contract</legend>
+            <label className="flex items-center gap-2 text-[9px] text-slate-300">
+              <input type="checkbox" checked={filterValues.maxCollateralEnabled} onChange={(event) => update("maxCollateralEnabled", event.target.checked)} className="accent-emerald-500" />
+              Apply maximum collateral cap
+            </label>
+            {filterValues.maxCollateralEnabled ? (
+              <div className="mt-2">
+                <SliderField
+                  label="Maximum collateral"
+                  value={maxCollateral}
+                  min={10_000}
+                  max={100_000}
+                  step={2_500}
+                  valueLabel={`$${maxCollateral.toLocaleString("en-US")}`}
+                  minLabel="$10k"
+                  maxLabel="$100k"
+                  onChange={(value) => update("maxCollateral", value)}
+                />
+                <p className="mt-1.5 text-[8px] leading-relaxed text-slate-600">Applied per contract before ranking alternatives.</p>
+              </div>
+            ) : (
+              <p className="mt-1.5 text-[8px] text-slate-600">No collateral cap is applied.</p>
+            )}
+          </fieldset>
         </div>
+        <p className="px-3 pb-2 text-[8px] text-slate-600">Range bounds match the stored option scans: 7–70 DTE and absolute put delta up to 0.50.</p>
+      </details>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+        <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.earnings} onChange={(event) => update("earnings", event.target.checked)} className="accent-emerald-500" />Allow expiration on/after earnings</label>
+        <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.trend} onChange={(event) => update("trend", event.target.checked)} className="accent-emerald-500" />Require above 200-day SMA</label>
+        <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.dividendOnly} onChange={(event) => update("dividendOnly", event.target.checked)} className="accent-emerald-500" />Dividend stocks only</label>
       </div>
       <p className="mt-3 text-[9px] leading-relaxed text-slate-600">Live results use source-backed fields only. The legacy sample-only undervaluation and wide-moat toggles are intentionally not represented here.</p>
     </form>

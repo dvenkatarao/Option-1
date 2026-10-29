@@ -116,11 +116,25 @@ export function WheelCandidateResults({
         <div className="flex items-center justify-between gap-3 sm:justify-end">
           <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-mono text-slate-400">{results?.rows.length ?? 0} candidates</span>
           <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950 p-1" role="group" aria-label="Candidate display mode">
-            <button type="button" aria-pressed={viewMode === "cards"} onClick={() => setViewMode("cards")} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-semibold ${viewMode === "cards" ? "bg-emerald-500/15 text-emerald-200" : "text-slate-500 hover:text-slate-200"}`}>
-              <LayoutGrid className="h-3.5 w-3.5" />Cards
+            <button
+              type="button"
+              aria-label="Cards view"
+              aria-pressed={viewMode === "cards"}
+              title="Cards view"
+              onClick={() => setViewMode("cards")}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${viewMode === "cards" ? "bg-emerald-500/15 text-emerald-200" : "text-slate-500 hover:text-slate-200"}`}
+            >
+              <LayoutGrid aria-hidden="true" className="h-4 w-4" />
             </button>
-            <button type="button" aria-pressed={viewMode === "table"} onClick={() => setViewMode("table")} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-semibold ${viewMode === "table" ? "bg-emerald-500/15 text-emerald-200" : "text-slate-500 hover:text-slate-200"}`}>
-              <List className="h-3.5 w-3.5" />Table
+            <button
+              type="button"
+              aria-label="Table view"
+              aria-pressed={viewMode === "table"}
+              title="Table view"
+              onClick={() => setViewMode("table")}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${viewMode === "table" ? "bg-emerald-500/15 text-emerald-200" : "text-slate-500 hover:text-slate-200"}`}
+            >
+              <List aria-hidden="true" className="h-4 w-4" />
             </button>
           </div>
         </div>
