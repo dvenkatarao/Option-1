@@ -1,21 +1,37 @@
 import React from 'react';
 import {
+  BookOpen,
   Compass,
   Layers,
-  RotateCw,
   PieChart,
-  BookOpen,
+  RotateCw,
   Search,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 
 export type MainTabType = 'dashboard' | 'etfs' | 'wheel' | 'portfolio' | 'research';
+
+type NavItem = {
+  id: MainTabType;
+  label: string;
+  icon: typeof Compass;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { id: 'dashboard', label: 'Mission Control', icon: Compass },
+  { id: 'etfs', label: 'ETF Intelligence', icon: Layers },
+  { id: 'wheel', label: 'Wheel Strategy Lab', icon: RotateCw },
+  { id: 'portfolio', label: 'Portfolio Studio', icon: PieChart },
+  { id: 'research', label: 'Research Academy', icon: BookOpen },
+];
 
 interface NavbarProps {
   activeTab: MainTabType;
   setActiveTab: (tab: MainTabType) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  onOpenMacro?: () => void;
   openCompareModal?: () => void;
   selectedCompareCount?: number;
 }
@@ -25,176 +41,109 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   searchQuery,
   setSearchQuery,
+  onOpenMacro,
   selectedCompareCount = 0,
 }) => {
+  const macroClick = onOpenMacro ?? (() => setActiveTab('research'));
+
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/90 border-b border-slate-800 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/40">
-              <RotateCw className="w-5 h-5 text-slate-950 font-extrabold stroke-[2.5]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+    <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Brand and quick actions share one predictable-height row. */}
+        <div className="flex h-14 items-center justify-between gap-3 sm:gap-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            aria-label="Go to Mission Control"
+            className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/40">
+              <RotateCw className="h-5 w-5 stroke-[2.5] text-slate-950" />
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5">
+                <span className="bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
                   WheelCore
                 </span>
-                <span className="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="shrink-0 rounded border border-emerald-500/30 bg-emerald-500/20 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase leading-none text-emerald-400">
                   v2.5 PRO
                 </span>
-              </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                US ETF & Options Wheel Intelligence Terminal
-              </p>
-            </div>
-          </div>
-
-          {/* Navigation Workstations */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800/80">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'dashboard'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Compass className="w-4 h-4" />
-              <span>Mission Control</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('etfs')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'etfs'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>ETF Intelligence</span>
-              {selectedCompareCount > 0 && (
-                <span className="bg-emerald-400 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
-                  {selectedCompareCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('wheel')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'wheel'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <RotateCw className="w-4 h-4" />
-              <span>Wheel Strategy Lab</span>
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-            </button>
+              <span className="mt-0.5 hidden truncate text-[10px] leading-tight text-slate-400 sm:block">
+                US ETF &amp; Options Wheel Intelligence Terminal
+              </span>
+            </span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('portfolio')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'portfolio'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <PieChart className="w-4 h-4" />
-              <span>Portfolio Studio</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('research')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'research'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Research Academy</span>
-            </button>
-          </nav>
-
-          {/* Quick Search & Indicators */}
-          <div className="flex items-center gap-3">
-            <div className="relative hidden lg:block w-48 xl:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+            <label className="relative hidden w-48 shrink-0 lg:block xl:w-64">
+              <span className="sr-only">Search ETFs and Wheel stocks</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search ETF / Wheel Stock..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900/90 border border-slate-800 text-xs text-slate-200 rounded-lg pl-9 pr-3 py-1.5 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/40 placeholder:text-slate-500 transition-all"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="h-9 w-full rounded-lg border border-slate-800 bg-slate-900/90 pl-9 pr-8 text-xs text-slate-200 outline-none transition placeholder:text-slate-500 focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/40"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-500 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
                 >
-                  ✕
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
-            </div>
+            </label>
 
-            <div className="hidden sm:flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-slate-400">Macro:</span>
-              <span className="text-cyan-300 font-semibold">See live signals</span>
-            </div>
+            <button
+              type="button"
+              onClick={macroClick}
+              aria-label="Open live macro signals"
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-2.5 text-xs font-semibold text-slate-300 transition hover:border-cyan-500/30 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 sm:px-3"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+              <span className="hidden sm:inline">Macro signals</span>
+              <span className="sm:hidden">Macro</span>
+            </button>
           </div>
         </div>
 
-        {/* Mobile Navigation bar */}
-        <div className="flex md:hidden overflow-x-auto py-2 gap-1 border-t border-slate-800/60">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap font-medium ${
-              activeTab === 'dashboard' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab('etfs')}
-            className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap font-medium ${
-              activeTab === 'etfs' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            ETFs Screener
-          </button>
-          <button
-            onClick={() => setActiveTab('wheel')}
-            className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap font-medium ${
-              activeTab === 'wheel' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            Wheel Lab
-          </button>
-          <button
-            onClick={() => setActiveTab('portfolio')}
-            className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap font-medium ${
-              activeTab === 'portfolio' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            Portfolio Studio
-          </button>
-          <button
-            onClick={() => setActiveTab('research')}
-            className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap font-medium ${
-              activeTab === 'research' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            Academy
-          </button>
-        </div>
+        {/* A dedicated nav row prevents the long menu labels from squeezing the brand or actions. */}
+        <nav
+          aria-label="Primary navigation"
+          className="flex min-w-0 items-center gap-1 overflow-x-auto border-t border-slate-800/70 py-1.5"
+        >
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveTab(id)}
+              aria-current={activeTab === id ? 'page' : undefined}
+              className={`inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 sm:px-3.5 ${
+                activeTab === id
+                  ? 'bg-emerald-600 font-semibold text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+              }`}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{label}</span>
+              {id === 'etfs' && selectedCompareCount > 0 && (
+                <span className="rounded-full bg-emerald-400 px-1.5 py-0.5 font-mono text-[9px] font-bold leading-none text-slate-950">
+                  {selectedCompareCount}
+                </span>
+              )}
+              {id === 'wheel' && (
+                <span className="relative flex h-2 w-2 shrink-0" aria-label="Wheel scanner active">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
       </div>
     </header>
   );
