@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ETFData, ActiveWheelCampaign } from '../../types';
 import { DEFAULT_WHEEL_FILTER_QUERY } from '../live/wheel-filter-state';
-import { IllustrativeDataNotice } from '../common/IllustrativeDataNotice';
 import { MainTabType } from '../layout/Navbar';
+import type { ScreenRow } from '../../types/liveScreener';
 import {
   ShieldAlert,
-  ShieldCheck,
   RotateCw,
   Sparkles,
   ArrowRight,
@@ -45,26 +43,62 @@ type LiveWheelResults = {
   generatedAt: string;
 };
 
+type EtfSnapshotResponse = {
+  rows: ScreenRow[];
+  hydrated: number;
+  totalUniverse: number;
+  remaining: number;
+  universe: { provider: string; configured: boolean; fetchedAt: string | null; stale: boolean };
+  refreshedAt: string | null;
+  stale: boolean;
+};
+
+type SavedWheelPosition = {
+  id: string;
+  ticker: string;
+  side: 'put_sold' | 'assigned' | 'call_sold' | 'closed';
+  strike: number;
+  expiration: string;
+  premium: number;
+  quantity: number;
+  openedAt: string;
+  closedAt: string | null;
+  costBasis: number | null;
+  notes: string | null;
+  createdAt: string;
+};
+
 interface DashboardViewProps {
-  etfs: ETFData[];
-  activeCampaigns: ActiveWheelCampaign[];
-  onSelectETF: (etf: ETFData) => void;
   onNavigate: (tab: MainTabType) => void;
   onViewAllWheelOpportunities: () => void;
-  onOpenCompare: () => void;
+  onOpenLiveEtfResearch: () => void;
+  onOpenLiveWheelJournal: () => void;
+}
+
+async function requestJson<T>(url: string): Promise<T> {
+  const response = await fetch(url, { cache: 'no-store' });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(typeof body?.error === 'string' ? body.error : `Request failed (${response.status})`);
+  }
+  return body as T;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
-  etfs,
-  activeCampaigns,
-  onSelectETF,
   onNavigate,
   onViewAllWheelOpportunities,
-  onOpenCompare,
+  onOpenLiveEtfResearch,
+  onOpenLiveWheelJournal,
 }) => {
   const [liveWheelResults, setLiveWheelResults] = useState<LiveWheelResults | null>(null);
   const [liveWheelLoading, setLiveWheelLoading] = useState(true);
   const [liveWheelError, setLiveWheelError] = useState<string | null>(null);
+  const [liveEtfSnapshot, setLiveEtfSnapshot] = useState<EtfSnapshotResponse | null>(null);
+  const [liveEtfLoading, setLiveEtfLoading] = useState(true);
+  const [liveEtfError, setLiveEtfError] = useState<string | null>(null);
+  const [savedWheelPositions, setSavedWheelPositions] = useState<SavedWheelPosition[] | null>(null);
+  const [savedWheelLoading, setSavedWheelLoading] = useState(true);
+  const [savedWheelError, setSavedWheelError] = useState<string | null>(null);
   const topWheelPicks = liveWheelResults?.rows.slice(0, 3) ?? [];
 
   useEffect(() => {
@@ -72,13 +106,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const load = async () => {
       setLiveWheelLoading(true);
       try {
-        const response = await fetch(`/api/wheel/results?${DEFAULT_WHEEL_FILTER_QUERY}`, { cache: 'no-store' });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof body?.error === 'string' ? body.error : `Live wheel scan unavailable (${response.status})`);
-        }
+        const data = await requestJson<LiveWheelResults>(`/api/wheel/results?${DEFAULT_WHEEL_FILTER_QUERY}`);
         if (active) {
-          setLiveWheelResults(body as LiveWheelResults);
+          setLiveWheelResults(data);
           setLiveWheelError(null);
         }
       } catch (error) {
@@ -96,14 +126,70 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   }, []);
 
-  const formatCash = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const data = await requestJson<EtfSnapshotResponse>('/api/etfs');
+        if (active) {
+          setLiveEtfSnapshot(data);
+          setLiveEtfError(null);
+        }
+      } catch (error) {
+        if (active) setLiveEtfError(error instanceof Error ? error.message : 'ETF data is unavailable');
+      } finally {
+        if (active) setLiveEtfLoading(false);
+      }
+    };
 
-  // Spotlight ETFs
-  const coreGrowthETF = etfs.find((e) => e.symbol === 'VOO') || etfs[0];
-  const divGrowthETF = etfs.find((e) => e.symbol === 'SCHD') || etfs[1];
-  const coveredCallETF = etfs.find((e) => e.symbol === 'JEPI') || etfs[2];
-  const highErosionETF = etfs.find((e) => e.symbol === 'TSLY') || etfs[etfs.length - 1];
+    void load();
+    const timer = window.setInterval(() => void load(), 5 * 60 * 1000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    requestJson<{ positions: SavedWheelPosition[] }>('/api/wheel/positions')
+      .then((data) => {
+        if (active) {
+          setSavedWheelPositions(data.positions ?? []);
+          setSavedWheelError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) setSavedWheelError(error instanceof Error ? error.message : 'Saved wheel journal is unavailable');
+      })
+      .finally(() => {
+        if (active) setSavedWheelLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const formatCash = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatPercent = (value: number | null | undefined, digits = 1) =>
+    value == null || !Number.isFinite(value) ? 'N/A' : `${(value * 100).toFixed(digits)}%`;
+
+  const etfRows = liveEtfSnapshot?.rows ?? [];
+  const spotlightRows: { row: ScreenRow; label: string }[] = [];
+  const usedSpotlightTickers = new Set<string>();
+  const addSpotlight = (row: ScreenRow | undefined, label: string) => {
+    if (!row || usedSpotlightTickers.has(row.ticker) || spotlightRows.length >= 4) return;
+    usedSpotlightTickers.add(row.ticker);
+    spotlightRows.push({ row, label });
+  };
+  addSpotlight(etfRows.find((row) => row.ticker === 'VOO'), 'Broad-market ETF');
+  addSpotlight(etfRows.find((row) => row.ticker === 'SCHD'), 'Dividend profile');
+  addSpotlight(etfRows.find((row) => row.ticker === 'JEPI'), 'Option-income profile');
+  const lowestPriceReturn = [...etfRows]
+    .filter((row) => row.priceRet3y != null)
+    .sort((a, b) => (a.priceRet3y ?? 0) - (b.priceRet3y ?? 0))[0];
+  addSpotlight(lowestPriceReturn, 'Lowest 3Y price-return proxy');
+  for (const row of etfRows) addSpotlight(row, 'Additional stored ETF');
+
+  const recentWheelEntries = savedWheelPositions?.slice(0, 3) ?? [];
 
   return (
     <div className="space-y-8 pb-12">
@@ -137,7 +223,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
 
               <button
-                onClick={() => onNavigate('etfs')}
+                onClick={onOpenLiveEtfResearch}
                 className="inline-flex items-center gap-2 bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-2.5 rounded-xl text-xs border border-slate-700 transition"
               >
                 <Layers className="w-4 h-4 text-emerald-400" />
@@ -154,43 +240,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* KPI Snapshot Widget */}
-          <div className="w-full lg:w-80 bg-slate-950/80 border border-slate-800/90 rounded-xl p-4.5 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <span className="text-xs text-slate-400 font-medium">Illustrative Model Target</span>
-              <span className="text-xs font-mono font-bold text-emerald-400">Example $100,000</span>
+          {/* Provider-backed snapshot; no account or realized-performance figures are inferred. */}
+          <div className="w-full lg:w-80 rounded-xl border border-slate-800/90 bg-slate-950/80 p-4.5 shadow-xl backdrop-blur-md">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <span className="text-xs font-medium text-slate-300">Source-Backed Snapshot</span>
+              <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono text-cyan-300">
+                {liveEtfSnapshot ? `Universe: ${liveEtfSnapshot.universe.provider}` : 'Provider data'}
+              </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-3">
-              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">Example Monthly Income</span>
-                <span className="text-base font-bold font-mono text-emerald-400 mt-0.5 block">$1,280</span>
-                <span className="text-[10px] text-slate-500">Example 15.3% · not realized</span>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-slate-800 bg-slate-900/90 p-2.5">
+                <span className="block font-mono text-[10px] uppercase text-slate-400">Stored ETF histories</span>
+                <span className="mt-0.5 block font-mono text-base font-bold text-white">
+                  {liveEtfSnapshot ? `${liveEtfSnapshot.hydrated} / ${liveEtfSnapshot.totalUniverse}` : liveEtfLoading ? 'Loading…' : 'N/A'}
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  {liveEtfSnapshot ? `${liveEtfSnapshot.remaining} pending hydration` : 'Database-backed coverage'}
+                </span>
               </div>
 
-              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">Delta-Based POP Proxy</span>
-                <span className="text-base font-bold font-mono text-cyan-400 mt-0.5 block">82.4%</span>
-                <span className="text-[10px] text-slate-500">Example avg delta: 0.21</span>
+              <div className="rounded-lg border border-slate-800 bg-slate-900/90 p-2.5">
+                <span className="block font-mono text-[10px] uppercase text-slate-400">Top wheel candidate</span>
+                <span className="mt-0.5 block font-mono text-base font-bold text-cyan-300">
+                  {topWheelPicks[0]?.g.row.ticker ?? (liveWheelLoading ? 'Loading…' : 'N/A')}
+                </span>
+                <span className="text-[10px] text-slate-500">{topWheelPicks[0] ? `Grade ${topWheelPicks[0].g.grade ?? 'N/A'} · provider scan` : 'No qualifying scan'}</span>
               </div>
 
-              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">Example ETF Growth</span>
-                <span className="text-base font-bold font-mono text-white mt-0.5 block">+11.2%</span>
-                <span className="text-[10px] text-slate-500">Example 5Y dividend CAGR</span>
+              <div className="rounded-lg border border-slate-800 bg-slate-900/90 p-2.5">
+                <span className="block font-mono text-[10px] uppercase text-slate-400">Modeled annualized ROC</span>
+                <span className="mt-0.5 block font-mono text-base font-bold text-emerald-400">
+                  {topWheelPicks[0] ? formatPercent(topWheelPicks[0].best.annRoc) : 'N/A'}
+                </span>
+                <span className="text-[10px] text-slate-500">Current candidate estimate</span>
               </div>
 
-              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">Illustrative NAV Score</span>
-                <span className="text-base font-bold font-mono text-emerald-400 mt-0.5 block">94/100</span>
-                <span className="text-[10px] text-slate-500">Example low-erosion label</span>
+              <div className="rounded-lg border border-slate-800 bg-slate-900/90 p-2.5">
+                <span className="block font-mono text-[10px] uppercase text-slate-400">OTM probability proxy</span>
+                <span className="mt-0.5 block font-mono text-base font-bold text-amber-300">
+                  {topWheelPicks[0] ? formatPercent(topWheelPicks[0].best.probOtm) : 'N/A'}
+                </span>
+                <span className="text-[10px] text-slate-500">Model output, not a win rate</span>
               </div>
             </div>
+            <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+              ETF quotes may be delayed and wheel metrics are estimates. No brokerage account is connected; balances, holdings, and realized performance are not shown.
+            </p>
           </div>
         </div>
       </div>
-
-      <IllustrativeDataNotice detail="The dashboard KPI tile, ETF spotlight performance/NAV scores, and seeded wheel campaign cards are bundled examples—not live ETF performance, an actual account, a verified win rate, or broker positions. The provider-scanned wheel candidates below are live-source research; use Live ETF Research for current stored-history ETF metrics." />
 
       {/* Section 1: Provider-backed wheel opportunities */}
       <div>
@@ -359,296 +458,199 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         )}
       </div>
 
-      {/* Section 2: ETF Intelligence Spotlight & NAV Health Alert */}
+      {/* Section 2: live ETF history and price-based risk indicators */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
           <div>
             <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-cyan-400" />
-              <h2 className="text-lg font-bold text-white">ETF Architecture & NAV Erosion Case Studies</h2>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono">
-                Physical Equity vs Covered Calls · Example Cases
+              <Layers className="h-5 w-5 text-cyan-400" />
+              <h2 className="text-lg font-bold text-white">ETF Research Snapshot</h2>
+              <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-xs text-cyan-300">
+                {liveEtfSnapshot ? `${liveEtfSnapshot.hydrated} stored · Universe: ${liveEtfSnapshot.universe.provider}` : 'Provider-backed history'}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Illustrative examples compare broad-market and covered-call structures; a high distribution yield does not guarantee total return or capital preservation.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenCompare}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            >
-              Side-by-Side Compare
-            </button>
-            <button
-              onClick={() => onNavigate('etfs')}
-              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
-            >
-              <span>Explore All {etfs.length} ETFs</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Broad Index Core */}
-          <div
-            onClick={() => onSelectETF(coreGrowthETF)}
-            className="cursor-pointer bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-4.5 transition group flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono font-bold text-lg text-white group-hover:text-emerald-400">
-                  {coreGrowthETF.symbol}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold font-mono">
-                  {coreGrowthETF.categoryLabel}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 line-clamp-1">{coreGrowthETF.name}</p>
-
-              <div className="mt-4 space-y-2 font-mono text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example 5Y Total Return:</span>
-                  <span className="font-bold text-emerald-400">+104.2%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example expense ratio:</span>
-                  <span className="text-slate-200">{coreGrowthETF.expenseRatio}% (demo value)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example NAV score:</span>
-                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> 98/100
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-              <span>Example yield: {coreGrowthETF.dividendYield}%</span>
-              <span className="text-emerald-400 group-hover:translate-x-1 transition font-medium flex items-center gap-1">
-                Deep Dive <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: Dividend Growth */}
-          <div
-            onClick={() => onSelectETF(divGrowthETF)}
-            className="cursor-pointer bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-4.5 transition group flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono font-bold text-lg text-white group-hover:text-emerald-400">
-                  {divGrowthETF.symbol}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold font-mono">
-                  {divGrowthETF.categoryLabel}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 line-clamp-1">{divGrowthETF.name}</p>
-
-              <div className="mt-4 space-y-2 font-mono text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example TTM yield:</span>
-                  <span className="font-bold text-emerald-400">{divGrowthETF.dividendYield}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example 5Y dividend CAGR:</span>
-                  <span className="text-emerald-300 font-bold">+{divGrowthETF.fiveYearDivGrowth}%/yr</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example NAV score:</span>
-                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> 95/100
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-              <span>Example ex-date: {divGrowthETF.exDividendDate}</span>
-              <span className="text-emerald-400 group-hover:translate-x-1 transition font-medium flex items-center gap-1">
-                Deep Dive <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Covered-call example */}
-          <div
-            onClick={() => onSelectETF(coveredCallETF)}
-            className="cursor-pointer bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-4.5 transition group flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono font-bold text-lg text-white group-hover:text-emerald-400">
-                  {coveredCallETF.symbol}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-semibold font-mono">
-                  Covered Call
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 line-clamp-1">{coveredCallETF.name}</p>
-
-              <div className="mt-4 space-y-2 font-mono text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example TTM yield:</span>
-                  <span className="font-bold text-emerald-400">{coveredCallETF.dividendYield}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Strategy example:</span>
-                  <span className="text-slate-300">OTM S&P Calls</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Example NAV score:</span>
-                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> 84/100 (demo score)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-              <span>Example frequency: Monthly</span>
-              <span className="text-emerald-400 group-hover:translate-x-1 transition font-medium flex items-center gap-1">
-                Deep Dive <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-
-          {/* Card 4: Erosion Risk Case Study */}
-          <div
-            onClick={() => onSelectETF(highErosionETF)}
-            className="cursor-pointer bg-rose-950/20 hover:bg-rose-950/30 border border-rose-900/40 hover:border-rose-700/60 rounded-xl p-4.5 transition group flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono font-bold text-lg text-rose-300">
-                  {highErosionETF.symbol}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold font-mono">
-                  Erosion Warning
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 line-clamp-1">{highErosionETF.name}</p>
-
-              <div className="mt-4 space-y-2 font-mono text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Example TTM yield:</span>
-                  <span className="font-bold text-amber-400">{highErosionETF.dividendYield}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Example 1Y price return:</span>
-                  <span className="text-rose-400 font-bold">-38.5%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Example NAV score:</span>
-                  <span className="text-rose-400 font-bold flex items-center gap-1">
-                    <ShieldAlert className="w-3.5 h-3.5" /> 18/100 (demo score)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-rose-900/40 flex items-center justify-between text-[11px] text-slate-400">
-              <span className="text-rose-400">Synthetic Decay Trap</span>
-              <span className="text-rose-300 group-hover:translate-x-1 transition font-medium flex items-center gap-1">
-                Inspect Risk <ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section 3: Seeded wheel campaign examples (not live or broker-connected) */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <RotateCw className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-bold text-white">Sample Wheel Campaign Tracker</h2>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
-                {activeCampaigns.length} Local Examples
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Seeded examples and session-only entries. These are not live broker positions and are not saved to the persistent account ledger.
+            <p className="mt-0.5 text-xs text-slate-400">
+              Stored provider history, distribution metrics, and a market-price erosion proxy. No synthetic returns or NAV scores are substituted.
             </p>
           </div>
 
           <button
-            onClick={() => onNavigate('wheel')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold transition shadow-md"
+            onClick={onOpenLiveEtfResearch}
+            className="inline-flex items-center gap-1.5 self-start rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/15 sm:self-auto"
           >
-            <span>Wheel Manager</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>Open Live ETF Research</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {activeCampaigns.map((camp) => (
-            <div
-              key={camp.id}
-              className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-white text-base">{camp.symbol}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-                      {camp.currentStep.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <span
-                    className={`text-[11px] font-mono font-semibold px-2 py-0.5 rounded ${
-                      camp.status === 'In Profit'
-                        ? 'text-emerald-400 bg-emerald-950/60 border border-emerald-800/40'
-                        : 'text-amber-400 bg-amber-950/60 border border-amber-800/40'
-                    }`}
+        {liveEtfError && (
+          <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+            {liveEtfSnapshot
+              ? `ETF refresh failed: ${liveEtfError}. Showing the last successful source response.`
+              : `Stored ETF research is unavailable: ${liveEtfError}. No example performance is shown.`}
+          </div>
+        )}
+
+        {liveEtfLoading && !liveEtfSnapshot ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-8 text-center text-sm text-slate-400">
+            Loading stored ETF history and quote coverage…
+          </div>
+        ) : !liveEtfSnapshot ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-8 text-center text-sm text-slate-400">
+            Configure the database and data providers, then hydrate ETF history in Live ETF Research. Dashboard metrics remain unavailable until source data exists.
+          </div>
+        ) : etfRows.length === 0 ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-200">No ETF history is stored yet.</p>
+            <p className="mt-1 text-xs text-slate-500">Use Live ETF Research to check source health and hydrate the configured ETF universe.</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {spotlightRows.map(({ row, label }) => {
+                const erosionTone = row.erosion === 'Severe'
+                  ? 'border-rose-900/50 bg-rose-950/20 hover:border-rose-700/60'
+                  : row.erosion === 'Moderate'
+                    ? 'border-amber-900/50 bg-amber-950/10 hover:border-amber-700/50'
+                    : 'border-slate-800 bg-slate-900/80 hover:border-cyan-500/40';
+                return (
+                  <button
+                    key={`${label}-${row.ticker}`}
+                    onClick={onOpenLiveEtfResearch}
+                    className={`group flex flex-col justify-between rounded-xl border p-4 text-left transition ${erosionTone}`}
                   >
-                    {camp.status}
-                  </span>
-                </div>
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="font-mono text-lg font-bold text-white group-hover:text-cyan-300">{row.ticker}</span>
+                        <span className="rounded border border-slate-700 bg-slate-950/70 px-2 py-0.5 font-mono text-[9px] font-semibold text-slate-300">{label}</span>
+                      </div>
+                      <p className="line-clamp-1 text-xs text-slate-400">{row.name ?? row.family ?? row.category ?? 'Stored ETF history'}</p>
 
-                <div className="space-y-1.5 text-xs font-mono my-3 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Target Strike:</span>
-                    <span className="text-slate-100 font-bold">${camp.targetStrike.toFixed(2)} {camp.optionType}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Total Premium:</span>
-                    <span className="text-emerald-400 font-bold">+${camp.premiumCollectedTotal}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Net Cost Basis:</span>
-                    <span className="text-cyan-300 font-bold">${camp.netCostBasisPerShare.toFixed(2)}/sh</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Annualized ROC:</span>
-                    <span className="text-amber-400 font-bold">{camp.annualizedROC}%</span>
-                  </div>
-                </div>
+                      <div className="my-4 space-y-2 font-mono text-xs">
+                        <div className="flex justify-between gap-3">
+                          <span className="text-slate-500">5Y annualized total return</span>
+                          <span className="font-bold text-slate-100">{formatPercent(row.r5y)}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-slate-500">TTM distribution yield</span>
+                          <span className="font-bold text-emerald-300">{formatPercent(row.yieldTtm)}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-slate-500">Expense ratio</span>
+                          <span className="text-slate-200">{formatPercent(row.expense, 2)}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="flex items-center gap-1 text-slate-500">
+                            {row.erosion === 'Severe' || row.erosion === 'Moderate' ? <ShieldAlert className="h-3.5 w-3.5 text-amber-400" /> : null}
+                            3Y price-return proxy
+                          </span>
+                          <span className={row.priceRet3y != null && row.priceRet3y < 0 ? 'font-semibold text-amber-300' : 'text-slate-200'}>
+                            {formatPercent(row.priceRet3y)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-3 border-t border-slate-800/70 pt-2">
+                          <span className="text-slate-500">Erosion signal</span>
+                          <span className="text-slate-200">{row.erosion || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                <p className="text-[11px] text-slate-400 leading-tight">
-                  {camp.notes}
-                </p>
-              </div>
-
-              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-slate-500" />
-                  {camp.dteRemaining > 0 ? `${camp.dteRemaining} DTE Remaining` : 'Expiring / Assigned'}
-                </span>
-                <span className="font-mono text-emerald-400 font-semibold">
-                  PnL: +${camp.unrealizedPnL + camp.realizedPnL}
-                </span>
-              </div>
+                    <div className="flex items-center justify-between border-t border-slate-800/80 pt-3 text-[10px] text-slate-500">
+                      <span>{row.category ?? row.family ?? 'ETF'}</span>
+                      <span className="inline-flex items-center gap-1 font-medium text-cyan-300 transition group-hover:translate-x-1">
+                        Inspect source <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          ))}
+            <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+              {liveEtfSnapshot.refreshedAt
+                ? `Delayed quote snapshot fetched ${new Date(liveEtfSnapshot.refreshedAt).toLocaleString()}${liveEtfSnapshot.stale ? ' · cached/stale' : ''}. `
+                : 'Quote timestamp unavailable. '}
+              3Y/5Y total returns are annualized from stored adjusted-close history; the erosion proxy uses market price and is not an official NAV or return-of-capital rating.
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Section 3: persisted app journal entries (manual, not broker synced) */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+          <div>
+            <div className="flex items-center gap-2">
+              <RotateCw className="h-5 w-5 text-emerald-400" />
+              <h2 className="text-lg font-bold text-white">Saved Wheel Journal</h2>
+              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 font-mono text-xs text-amber-300">
+                {savedWheelPositions ? `${savedWheelPositions.length} saved entries` : savedWheelLoading ? 'Loading…' : savedWheelError ? 'Unavailable' : 'No entries'}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-400">
+              User-entered journal records only. These are not broker-synced positions; no mark-to-market P&amp;L or account performance is inferred.
+            </p>
+          </div>
+
+          <button
+            onClick={onOpenLiveWheelJournal}
+            className="inline-flex items-center gap-1.5 self-start rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-md transition hover:bg-emerald-500 sm:self-auto"
+          >
+            <span>Open Live Wheel Journal</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
         </div>
+
+        {savedWheelError && (
+          <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+            Saved wheel journal is unavailable: {savedWheelError}. No sample positions are substituted.
+          </div>
+        )}
+
+        {savedWheelLoading ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-8 text-center text-sm text-slate-400">Loading saved journal entries…</div>
+        ) : recentWheelEntries.length === 0 ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-200">{savedWheelError ? 'Journal data is unavailable.' : 'No saved wheel journal entries.'}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {savedWheelError ? 'Check database configuration and source health in the Live Wheel Journal.' : 'Log your own trade details in the Live Wheel Journal to see them here.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {recentWheelEntries.map((entry) => {
+              const isClosed = entry.side === 'closed' || entry.closedAt != null;
+              const stage = entry.side.replaceAll('_', ' ');
+              return (
+                <div key={entry.id} className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-950/80 p-4">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-base font-bold text-white">{entry.ticker}</span>
+                        <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 font-mono text-[10px] font-semibold capitalize text-slate-300">{stage}</span>
+                      </div>
+                      <span className={`rounded px-2 py-0.5 font-mono text-[10px] font-semibold ${isClosed ? 'border border-slate-700 bg-slate-800 text-slate-400' : 'border border-emerald-800/40 bg-emerald-950/60 text-emerald-300'}`}>
+                        {isClosed ? 'Closed' : 'Journal entry'}
+                      </span>
+                    </div>
+
+                    <div className="my-3 space-y-2 rounded-lg border border-slate-800/60 bg-slate-900/60 p-2.5 font-mono text-xs">
+                      <div className="flex justify-between gap-3"><span className="text-slate-400">Strike</span><span className="font-bold text-slate-100">${entry.strike.toFixed(2)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-slate-400">Recorded premium / share</span><span className="font-bold text-emerald-300">${entry.premium.toFixed(2)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-slate-400">Contracts entered</span><span className="text-slate-200">{entry.quantity}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-slate-400">Expiration</span><span className="text-slate-200">{entry.expiration}</span></div>
+                    </div>
+                    {entry.notes && <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-400">{entry.notes}</p>}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-800/80 pt-2.5 text-[11px] text-slate-400">
+                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3 text-slate-500" />Opened {entry.openedAt}</span>
+                    <span className="font-mono text-slate-500">Manual entry</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Section 4: Self-Guided Playbooks & Educational Callouts */}

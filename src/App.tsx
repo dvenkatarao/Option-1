@@ -196,9 +196,6 @@ export function App() {
         {/* WORKSTATION 1: Dashboard / Mission Control */}
         {activeTab === 'dashboard' && (
           <DashboardView
-            etfs={etfs}
-            activeCampaigns={activeCampaigns}
-            onSelectETF={(etf) => setSelectedETF(etf)}
             onNavigate={(tab) => {
               setActiveTab(tab);
               setIsCompareViewOpen(false);
@@ -207,9 +204,14 @@ export function App() {
               setActiveTab('wheel');
               setWheelSubTab('live');
             }}
-            onOpenCompare={() => {
+            onOpenLiveEtfResearch={() => {
               setActiveTab('etfs');
-              setIsCompareViewOpen(true);
+              setShowLiveEtfScreener(true);
+              setIsCompareViewOpen(false);
+            }}
+            onOpenLiveWheelJournal={() => {
+              setActiveTab('wheel');
+              setWheelSubTab('live');
             }}
           />
         )}
