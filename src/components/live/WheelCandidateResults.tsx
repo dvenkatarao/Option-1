@@ -7,12 +7,11 @@ const timestamp = (value: string) => new Date(value).toLocaleString();
 
 type ViewMode = "cards" | "table";
 
-function Metric({ label, value, tone = "text-slate-100", hint }: { label: string; value: string; tone?: string; hint?: string }) {
+function Metric({ label, value, tone = "text-slate-100", title }: { label: string; value: string; tone?: string; title?: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-2.5">
+    <div className="min-w-0" title={title}>
       <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-      <div className={`mt-1 font-mono text-sm font-bold ${tone}`}>{value}</div>
-      {hint && <div className="mt-1 text-[9px] leading-relaxed text-slate-600">{hint}</div>}
+      <div className={`mt-0.5 truncate font-mono text-sm font-bold ${tone}`}>{value}</div>
     </div>
   );
 }
@@ -31,59 +30,83 @@ function CandidateCard({
   onLoadChain: (ticker: string) => void;
 }) {
   const ticker = row.g.row.ticker;
+  const delta = row.best.contract.delta == null ? "N/A" : row.best.contract.delta.toFixed(2);
+  const score = Number.isFinite(row.best.score) ? row.best.score.toFixed(0) : "N/A";
+
   return (
-    <article className="flex min-w-0 flex-col rounded-xl border border-slate-800 bg-slate-950/60 p-4 transition-colors hover:border-slate-700">
-      <div className="flex items-start justify-between gap-3">
+    <article className="flex min-w-0 flex-col rounded-xl border border-slate-800 bg-slate-950/60 p-3.5 transition-colors hover:border-slate-700">
+      <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <button onClick={() => onOpenDetail(ticker)} className="font-mono text-lg font-extrabold text-white hover:text-emerald-300" aria-label={`Open ${ticker} detail workspace`}>{ticker}</button>
-          <p className="truncate text-[10px] text-slate-500">{row.g.row.name ?? "Provider-backed stock"}</p>
-          <p className="mt-1 truncate text-[9px] text-slate-600">{row.g.row.sector ?? "Sector unavailable"} · Quote {cash(row.ctx.price)}</p>
-          <p className="mt-1 text-[9px] text-slate-600">{row.ctx.nextEarnings ? `Earnings ${row.ctx.nextEarnings}${row.g.row.events?.earningsEstimated ? " · est." : ""}` : "Earnings unknown"}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => onOpenDetail(ticker)} className="font-mono text-lg font-extrabold leading-none text-white hover:text-emerald-300" aria-label={`Open ${ticker} detail workspace`}>{ticker}</button>
+            <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300">Grade {row.g.grade ?? "N/A"}</span>
+          </div>
+          <p className="mt-1 truncate text-[10px] text-slate-400">{row.g.row.name ?? "Provider-backed stock"}</p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-xs font-bold text-emerald-300">Grade {row.g.grade ?? "N/A"}</span>
-          <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[9px] text-cyan-200">Account hint · {row.best.account.flag}</span>
+        <div className="shrink-0 text-right">
+          <div className="font-mono text-base font-bold leading-none text-white">{cash(row.ctx.price)}</div>
+          <div className="mt-1 text-[9px] uppercase tracking-wider text-slate-600">Underlying</div>
+        </div>
+      </header>
+
+      <p className="mt-2 truncate text-[9px] text-slate-500">
+        {row.g.row.sector ?? "Sector unavailable"} · {row.ctx.nextEarnings ? `Earnings ${row.ctx.nextEarnings}${row.g.row.events?.earningsEstimated ? " · est." : ""}` : "Earnings unknown"}
+      </p>
+
+      <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-2">
+        <div title="Wheel ranking heuristic; not probability of profit.">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Wheel score</div>
+          <div className="mt-0.5 font-mono text-xs font-bold text-emerald-300">{score}</div>
+        </div>
+        <div>
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">IV rank</div>
+          <div className="mt-0.5 font-mono text-xs font-bold text-cyan-300">{ivRank == null ? "N/A" : `${ivRank}%`}</div>
+        </div>
+        <div title="Model-derived account-fit hint; not connected to a brokerage account.">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Account hint</div>
+          <div className="mt-0.5 font-mono text-xs font-bold text-cyan-200">{row.best.account.flag}</div>
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/10 to-slate-950 p-3">
+      <div className="mt-3 rounded-xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/10 to-slate-950 p-3">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-200/70">Best qualifying cash-secured put</div>
-            <div className="mt-1 font-mono text-xl font-extrabold text-white">${row.best.contract.strike.toFixed(2)} <span className="text-xs font-medium text-slate-400">strike</span></div>
-            <div className="mt-1 text-[10px] text-slate-400">Expires {row.best.contract.expiration} · {row.best.dte} DTE</div>
+            <div className="mt-1 font-mono text-xl font-extrabold leading-none text-white">${row.best.contract.strike.toFixed(2)} <span className="text-[10px] font-medium text-slate-400">strike</span></div>
+            <div className="mt-1.5 text-[9px] text-slate-400">Expires {row.best.contract.expiration} · {row.best.dte} DTE</div>
           </div>
-          <div className="rounded-lg border border-slate-700/80 bg-slate-950/80 px-2.5 py-2 text-right">
+          <div className="shrink-0 rounded-lg border border-slate-700/80 bg-slate-950/80 px-2.5 py-1.5 text-right">
             <div className="text-[9px] uppercase tracking-wider text-slate-500">Put delta</div>
-            <div className="mt-1 font-mono text-sm font-bold text-slate-200">{row.best.contract.delta == null ? "N/A" : row.best.contract.delta.toFixed(2)}</div>
+            <div className="mt-0.5 font-mono text-sm font-bold text-slate-200">{delta}</div>
           </div>
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5">
         <Metric label="Credit / share" value={cash(row.best.credit)} tone="text-emerald-300" />
-        <Metric label="Annualized ROC" value={pct(row.best.annRoc)} hint="Simple premium-to-cash calculation" />
-        <Metric label="OTM proxy" value={pct(row.best.probOtm)} hint="Delta-derived proxy, not a measured win rate" />
-        <Metric label="Cash secured" value={cash(row.best.cash)} hint="Per contract; not account buying power" />
+        <Metric label="Annualized ROC" value={pct(row.best.annRoc)} title="Simple premium-to-cash calculation; not a forecast." />
+        <Metric label="OTM proxy" value={pct(row.best.probOtm)} title="Delta-derived proxy, not a measured win rate." />
+        <Metric label="Cash secured / contract" value={cash(row.best.cash)} title="Per contract; not account buying power." />
+        <p className="col-span-2 text-[9px] leading-relaxed text-slate-600">Annualized ROC is a simple premium-to-cash calculation; OTM is a delta-derived proxy.</p>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3 text-[9px] text-slate-500">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-800 pb-2 text-[9px] text-slate-500">
         <span>Breakeven <b className="font-mono text-slate-300">{cash(row.best.breakeven)}</b> · Cushion <b className="font-mono text-slate-300">{pct(row.best.breakevenCushion)}</b></span>
-        <span>IV rank <b className="font-mono text-slate-300">{ivRank == null ? "N/A" : `${ivRank}%`}</b> · {row.count} qualifying contract{row.count === 1 ? "" : "s"}</span>
+        <span>{row.count} qualifying contract{row.count === 1 ? "" : "s"}</span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[9px]">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px]">
         <span className="rounded-full border border-slate-800 bg-slate-950 px-2 py-1 text-slate-400">{row.source ?? "Provider source unavailable"}</span>
         {row.stale
-          ? <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-200">Stale scan</span>
-          : <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">Within scan freshness window</span>}
+          ? <span title="This scan is older than the expected freshness window." className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-200">Stale scan</span>
+          : <span title="This scan is within the expected freshness window." className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">Fresh scan</span>}
         <span className="text-slate-600">Scanned {timestamp(row.scannedAt)}</span>
       </div>
-      {row.fallbackReason && <p className="mt-2 text-[9px] leading-relaxed text-amber-200/80">Fallback context: {row.fallbackReason}</p>}
+      {row.fallbackReason && <p className="mt-1.5 text-[9px] leading-relaxed text-amber-200/80">Fallback context: {row.fallbackReason}</p>}
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button onClick={() => onOpenDetail(ticker)} className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-2 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/10">Detail workspace</button>
-        <button onClick={() => onLoadChain(ticker)} className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-[10px] font-semibold text-slate-300 hover:text-white">{chainLoading ? "Loading chain…" : "Chain snapshot"}</button>
+        <button disabled={chainLoading} onClick={() => onLoadChain(ticker)} className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-[10px] font-semibold text-slate-300 hover:text-white disabled:cursor-wait disabled:opacity-60">{chainLoading ? "Loading chain…" : "Chain snapshot"}</button>
       </div>
     </article>
   );
