@@ -3,7 +3,9 @@ import type { Dispatch, FormEvent, SetStateAction } from "react";
 import type { WheelFilterState } from "./wheel-filter-state";
 
 const inputClass = "w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500/60";
-const rangeClass = "mt-1.5 w-full cursor-pointer accent-cyan-400";
+const DTE_OPTIONS = [7, 14, 21, 28, 30, 35, 42, 45, 50, 56, 60, 63, 70];
+const DELTA_OPTIONS = [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5];
+const COLLATERAL_OPTIONS = [10_000, 25_000, 50_000, 75_000, 100_000];
 
 function boundedNumber(value: string, min: number, max: number, fallback: number) {
   const number = Number(value);
@@ -41,87 +43,39 @@ function NumberField({
   );
 }
 
-function SliderField({
-  label,
-  value,
-  min,
-  max,
-  step,
-  valueLabel,
-  onChange,
-  minLabel,
-  maxLabel,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  valueLabel: string;
-  onChange: (value: string) => void;
-  minLabel: string;
-  maxLabel: string;
-}) {
-  return (
-    <label className="block rounded-lg border border-slate-800 bg-slate-950/70 p-2">
-      <span className="flex items-center justify-between gap-3 text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-        <span>{label}</span>
-        <output className="font-mono text-[10px] font-bold normal-case tracking-normal text-cyan-200">{valueLabel}</output>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(event) => onChange(event.target.value)}
-        className={rangeClass}
-      />
-      <span className="mt-0.5 flex justify-between text-[8px] text-slate-600"><span>{minLabel}</span><span>{maxLabel}</span></span>
-    </label>
-  );
-}
-
-function RangeSliderField({
+function RangeSelectField({
   label,
   minValue,
   maxValue,
-  min,
-  max,
-  step,
-  onChange,
+  options,
   formatValue,
+  onChange,
 }: {
   label: string;
   minValue: string;
   maxValue: string;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (minValue: string, maxValue: string) => void;
+  options: number[];
   formatValue: (value: number) => string;
+  onChange: (handle: "min" | "max", value: string) => void;
 }) {
-  const low = boundedNumber(minValue, min, max, min);
-  const high = boundedNumber(maxValue, min, max, max);
-
-  const update = (handle: "min" | "max", rawValue: string) => {
-    const next = boundedNumber(rawValue, min, max, handle === "min" ? low : high);
-    if (handle === "min") onChange(String(Math.min(next, high)), String(high));
-    else onChange(String(low), String(Math.max(next, low)));
-  };
+  const min = Number(minValue);
+  const max = Number(maxValue);
 
   return (
     <fieldset className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
       <legend className="px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">{label}</legend>
       <div className="grid grid-cols-2 gap-2">
-        <label className="block text-[8px] text-slate-500">
-          <span className="flex items-center justify-between gap-1">Min <output className="font-mono text-cyan-200">{formatValue(low)}</output></span>
-          <input type="range" min={min} max={max} step={step} value={low} aria-label={`Minimum ${label}`} onChange={(event) => update("min", event.target.value)} className={rangeClass} />
+        <label className="block text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+          Minimum
+          <select value={minValue} onChange={(event) => onChange("min", event.target.value)} className={inputClass + " mt-1"}>
+            {options.map((value) => <option key={value} value={String(value)} disabled={value > max}>{formatValue(value)}</option>)}
+          </select>
         </label>
-        <label className="block text-[8px] text-slate-500">
-          <span className="flex items-center justify-between gap-1">Max <output className="font-mono text-cyan-200">{formatValue(high)}</output></span>
-          <input type="range" min={min} max={max} step={step} value={high} aria-label={`Maximum ${label}`} onChange={(event) => update("max", event.target.value)} className={rangeClass} />
+        <label className="block text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+          Maximum
+          <select value={maxValue} onChange={(event) => onChange("max", event.target.value)} className={inputClass + " mt-1"}>
+            {options.map((value) => <option key={value} value={String(value)} disabled={value < min}>{formatValue(value)}</option>)}
+          </select>
         </label>
       </div>
     </fieldset>
@@ -144,8 +98,24 @@ export function WheelFilterPanel({
   const update = <K extends keyof WheelFilterState>(key: K, value: WheelFilterState[K]) => {
     setFilterValues((current) => ({ ...current, [key]: value }));
   };
-  const updateRange = (minKey: "dteMin" | "deltaMin", maxKey: "dteMax" | "deltaMax", minValue: string, maxValue: string) => {
-    setFilterValues((current) => ({ ...current, [minKey]: minValue, [maxKey]: maxValue }));
+  const updateRange = (
+    minKey: "dteMin" | "deltaMin",
+    maxKey: "dteMax" | "deltaMax",
+    handle: "min" | "max",
+    value: string,
+  ) => {
+    setFilterValues((current) => {
+      let minValue = Number(current[minKey]);
+      let maxValue = Number(current[maxKey]);
+      if (handle === "min") {
+        minValue = Number(value);
+        if (minValue > maxValue) maxValue = minValue;
+      } else {
+        maxValue = Number(value);
+        if (maxValue < minValue) minValue = maxValue;
+      }
+      return { ...current, [minKey]: String(minValue), [maxKey]: String(maxValue) };
+    });
   };
   const sectorOptions = [...new Set([
     ...sectors.filter((sector) => sector.trim().length > 0),
@@ -156,6 +126,7 @@ export function WheelFilterPanel({
   const summaryDteMax = boundedNumber(filterValues.dteMax, 7, 70, 50);
   const summaryDeltaMin = boundedNumber(filterValues.deltaMin, 0.01, 0.5, 0.15);
   const summaryDeltaMax = boundedNumber(filterValues.deltaMax, 0.01, 0.5, 0.3);
+  const collateralSelection = filterValues.maxCollateralEnabled && filterValues.maxCollateral ? filterValues.maxCollateral : "none";
 
   return (
     <form onSubmit={onSubmit} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -241,59 +212,61 @@ export function WheelFilterPanel({
           <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
         </summary>
         <div className="grid items-start gap-2 border-t border-slate-800 p-2 sm:grid-cols-2 xl:grid-cols-3">
-          <RangeSliderField
+          <RangeSelectField
             label="Days to expiration"
             minValue={filterValues.dteMin}
             maxValue={filterValues.dteMax}
-            min={7}
-            max={70}
-            step={1}
+            options={DTE_OPTIONS}
             formatValue={(value) => `${value}d`}
-            onChange={(minValue, maxValue) => updateRange("dteMin", "dteMax", minValue, maxValue)}
+            onChange={(handle, value) => updateRange("dteMin", "dteMax", handle, value)}
           />
-          <RangeSliderField
+          <RangeSelectField
             label="Absolute put delta"
             minValue={filterValues.deltaMin}
             maxValue={filterValues.deltaMax}
-            min={0.01}
-            max={0.5}
-            step={0.01}
+            options={DELTA_OPTIONS}
             formatValue={(value) => value.toFixed(2)}
-            onChange={(minValue, maxValue) => updateRange("deltaMin", "deltaMax", minValue, maxValue)}
+            onChange={(handle, value) => updateRange("deltaMin", "deltaMax", handle, value)}
           />
           <fieldset className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <legend className="px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Cash secured per contract</legend>
-            <label className="flex items-center gap-2 text-[9px] text-slate-300">
-              <input type="checkbox" checked={filterValues.maxCollateralEnabled} onChange={(event) => update("maxCollateralEnabled", event.target.checked)} className="accent-emerald-500" />
-              Apply maximum collateral cap
+            <label className="block text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+              Maximum collateral
+              <select
+                value={collateralSelection}
+                onChange={(event) => {
+                  const selected = event.target.value;
+                  if (selected === "none") {
+                    setFilterValues((current) => ({ ...current, maxCollateralEnabled: false }));
+                  } else {
+                    setFilterValues((current) => ({ ...current, maxCollateral: selected, maxCollateralEnabled: true }));
+                  }
+                }}
+                className={inputClass + " mt-1"}
+              >
+                <option value="none">No cap</option>
+                {COLLATERAL_OPTIONS.map((value) => <option key={value} value={String(value)}>${(value / 1000).toLocaleString("en-US")}k</option>)}
+              </select>
             </label>
-            {filterValues.maxCollateralEnabled ? (
-              <div className="mt-2">
-                <SliderField
-                  label="Maximum collateral"
-                  value={maxCollateral}
-                  min={10_000}
-                  max={100_000}
-                  step={2_500}
-                  valueLabel={`$${maxCollateral.toLocaleString("en-US")}`}
-                  minLabel="$10k"
-                  maxLabel="$100k"
-                  onChange={(value) => update("maxCollateral", value)}
-                />
-                <p className="mt-1.5 text-[8px] leading-relaxed text-slate-600">Applied per contract before ranking alternatives.</p>
-              </div>
-            ) : (
-              <p className="mt-1.5 text-[8px] text-slate-600">No collateral cap is applied.</p>
-            )}
+            <p className="mt-1.5 text-[8px] leading-relaxed text-slate-600">Applied per contract before ranking alternatives.</p>
           </fieldset>
         </div>
-        <p className="px-3 pb-2 text-[8px] text-slate-600">Range bounds match the stored option scans: 7–70 DTE and absolute put delta up to 0.50.</p>
+        <p className="px-3 pb-2 text-[8px] text-slate-600">Choices match the stored option scans: 7–70 DTE and absolute put delta up to 0.50.</p>
       </details>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-        <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.earnings} onChange={(event) => update("earnings", event.target.checked)} className="accent-emerald-500" />Allow expiration on/after earnings</label>
-        <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.trend} onChange={(event) => update("trend", event.target.checked)} className="accent-emerald-500" />Require above 200-day SMA</label>
-        <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300"><input type="checkbox" checked={filterValues.dividendOnly} onChange={(event) => update("dividendOnly", event.target.checked)} className="accent-emerald-500" />Dividend stocks only</label>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <label className="flex min-w-0 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300">
+          <input type="checkbox" checked={filterValues.earnings} onChange={(event) => update("earnings", event.target.checked)} className="accent-emerald-500" />
+          <span>Allow expiration on/after earnings</span>
+        </label>
+        <label className="flex min-w-0 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300">
+          <input type="checkbox" checked={filterValues.trend} onChange={(event) => update("trend", event.target.checked)} className="accent-emerald-500" />
+          <span>Require above 200-day SMA</span>
+        </label>
+        <label className="flex min-w-0 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[10px] text-slate-300">
+          <input type="checkbox" checked={filterValues.dividendOnly} onChange={(event) => update("dividendOnly", event.target.checked)} className="accent-emerald-500" />
+          <span>Dividend stocks only</span>
+        </label>
       </div>
       <p className="mt-3 text-[9px] leading-relaxed text-slate-600">Live results use source-backed fields only. The legacy sample-only undervaluation and wide-moat toggles are intentionally not represented here.</p>
     </form>

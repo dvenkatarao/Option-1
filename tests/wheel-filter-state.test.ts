@@ -22,6 +22,20 @@ describe("shared live wheel filter defaults", () => {
     });
   });
 
+  it("serializes dropdown range selections through the existing API parameters", () => {
+    const params = new URLSearchParams(serializeWheelFilterState({
+      ...DEFAULT_WHEEL_FILTERS,
+      dteMin: "14",
+      dteMax: "30",
+      deltaMin: "0.1",
+      deltaMax: "0.2",
+    }));
+    expect(params.get("dteMin")).toBe("14");
+    expect(params.get("dteMax")).toBe("30");
+    expect(params.get("dMin")).toBe("0.1");
+    expect(params.get("dMax")).toBe("0.2");
+  });
+
   it("serializes the optional live sector and per-contract collateral cap", () => {
     const query = serializeWheelFilterState({
       ...DEFAULT_WHEEL_FILTERS,
