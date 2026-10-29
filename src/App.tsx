@@ -110,6 +110,11 @@ export function App() {
         }}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        onOpenMacro={() => {
+          setActiveTab('research');
+          setResearchView('live');
+          setIsCompareViewOpen(false);
+        }}
         selectedCompareCount={selectedForCompare.length}
       />
 
