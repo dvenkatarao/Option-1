@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseFilters } from "../src/lib/wheel-filters";
-import { DEFAULT_WHEEL_FILTER_QUERY } from "../src/components/live/wheel-filter-state";
+import { DEFAULT_WHEEL_FILTERS, DEFAULT_WHEEL_FILTER_QUERY, serializeWheelFilterState } from "../src/components/live/wheel-filter-state";
 
 describe("shared live wheel filter defaults", () => {
   it("matches the live scanner's A-or-better opportunity criteria", () => {
@@ -20,5 +20,20 @@ describe("shared live wheel filter defaults", () => {
       minAnnReturn: 0.08,
       allowEarnings: false,
     });
+  });
+
+  it("serializes the optional live sector and per-contract collateral cap", () => {
+    const query = serializeWheelFilterState({
+      ...DEFAULT_WHEEL_FILTERS,
+      sector: "Technology",
+      maxCollateral: "50000",
+      maxCollateralEnabled: true,
+    });
+    const params = new URLSearchParams(query);
+    expect(params.get("sector")).toBe("Technology");
+    expect(params.get("cashMax")).toBe("50000");
+
+    const withoutCap = serializeWheelFilterState({ ...DEFAULT_WHEEL_FILTERS, maxCollateralEnabled: false });
+    expect(new URLSearchParams(withoutCap).has("cashMax")).toBe(false);
   });
 });

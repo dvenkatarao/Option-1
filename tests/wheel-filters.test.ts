@@ -50,6 +50,18 @@ describe("parseFilters", () => {
     const g = parseFilters(sp);
     expect(g.params).toEqual(f.params);
   });
+  it("parses and preserves provider-backed sector and collateral filters", () => {
+    const f = parseFilters({ cashMax: "25000", sector: " Technology " });
+    expect(f.maxCollateral).toBe(25000);
+    expect(f.sector).toBe("Technology");
+
+    const roundTrip = parseFilters(Object.fromEntries(new URLSearchParams(filtersQuery(f))));
+    expect(roundTrip.maxCollateral).toBe(25000);
+    expect(roundTrip.sector).toBe("Technology");
+
+    expect(parseFilters({}).maxCollateral).toBeNull();
+    expect(parseFilters({ sector: "all" }).sector).toBeNull();
+  });
   it("defaults missing-data policy to exclude and reads keep", () => {
     expect(parseFilters({}).missingPolicy).toBe("exclude");
     expect(parseFilters({ miss: "keep" }).missingPolicy).toBe("keep");
