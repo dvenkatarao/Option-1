@@ -11,6 +11,9 @@ export type WheelFilterState = {
   maxSpread: string;
   minReturn: string;
   minScore: string;
+  maxCollateral: string;
+  maxCollateralEnabled: boolean;
+  sector: string;
   earnings: boolean;
   trend: boolean;
   dividendOnly: boolean;
@@ -30,6 +33,9 @@ export const DEFAULT_WHEEL_FILTERS: WheelFilterState = {
   maxSpread: "10",
   minReturn: "8",
   minScore: "15",
+  maxCollateral: "50000",
+  maxCollateralEnabled: false,
+  sector: "all",
   earnings: false,
   trend: false,
   dividendOnly: false,
@@ -50,6 +56,10 @@ export function serializeWheelFilterState(filterValues: WheelFilterState): strin
     ret: filterValues.minReturn,
     minScore: filterValues.minScore,
   });
+  if (filterValues.maxCollateralEnabled && filterValues.maxCollateral !== "") {
+    query.set("cashMax", filterValues.maxCollateral);
+  }
+  if (filterValues.sector && filterValues.sector !== "all") query.set("sector", filterValues.sector);
   if (filterValues.earnings) query.set("earn", "1");
   if (filterValues.trend) query.set("trend", "1");
   if (filterValues.dividendOnly) query.set("divOnly", "1");

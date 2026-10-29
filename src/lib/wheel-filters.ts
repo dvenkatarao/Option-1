@@ -36,6 +36,11 @@ export function parseFilters(sp: SP): WheelFilters {
     minAnnReturn: numIn(sp.ret, d.minAnnReturn * 100, 0, 500) / 100,
     allowEarnings: one(sp.earn) === "1",
   };
+  const maxCollateral = numOrNull(sp.cashMax, 1_000, 1_000_000);
+  const rawSector = one(sp.sector)?.trim();
+  const sector = rawSector && rawSector.toLocaleLowerCase("en-US") !== "all"
+    ? rawSector.slice(0, 80)
+    : null;
   const acct = one(sp.acct);
   const account: AccountFilter = acct === "R" || acct === "T" ? acct : "all";
 
@@ -111,6 +116,8 @@ export function parseFilters(sp: SP): WheelFilters {
     trendOnly: one(sp.trend) === "1",
     minScore: numIn(sp.minScore, 15, 0, 100),
     divOnly: one(sp.divOnly) === "1",
+    maxCollateral,
+    sector,
   };
 }
 
@@ -167,5 +174,7 @@ export function filtersQuery(f: WheelFilters): string {
   if (f.trendOnly) q.set("trend", "1");
   if (f.divOnly) q.set("divOnly", "1");
   if (f.account !== "all") q.set("acct", f.account);
+  if (f.maxCollateral != null) q.set("cashMax", String(f.maxCollateral));
+  if (f.sector) q.set("sector", f.sector);
   return q.toString();
 }

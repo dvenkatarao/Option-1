@@ -168,6 +168,10 @@ export type WheelFilters = {
   trendOnly: boolean;
   minScore: number;
   divOnly: boolean;
+  /** Maximum cash-secured collateral allowed for the selected put, per contract. */
+  maxCollateral: number | null;
+  /** Optional provider-backed stock sector filter. */
+  sector: string | null;
 };
 
 export function matchesWheelGrade(grade: StockGrade | null, filter: WheelFilters["minGrade"], mode: GradeMatch): boolean {
@@ -184,6 +188,11 @@ export function comparePutCandidates(a: Pick<PutCandidate, "annRoc" | "score">, 
     : b.score - a.score || b.annRoc - a.annRoc;
 }
 
+/** Keep affordable alternatives in the ranking pool before selecting a ticker's best contract. */
+export function filterCandidatesByCollateral<T extends { cash: number }>(candidates: T[], maxCollateral: number | null): T[] {
+  return maxCollateral == null ? candidates : candidates.filter((candidate) => candidate.cash <= maxCollateral);
+}
+
 export const DEFAULT_FILTERS: WheelFilters = {
   params: DEFAULT_PARAMS,
   minGrade: "A",
@@ -198,6 +207,8 @@ export const DEFAULT_FILTERS: WheelFilters = {
   trendOnly: false,
   minScore: 15,
   divOnly: false,
+  maxCollateral: null,
+  sector: null,
 };
 
 export type WheelRow = {
@@ -208,11 +219,14 @@ export type WheelRow = {
   source: string | null;
   fallbackReason: string | null;
   scannedAt: Date;
+  stale: boolean;
 };
 export type EarningsWatchRow = { g: GradedStock; ctx: StockCtx; days: number; estimated: boolean };
 
 export type WheelResults = {
   rows: WheelRow[];
+  /** Available provider-backed stock sectors, before candidate filters. */
+  sectors: string[];
   /** Stocks with a qualifying put only if expiries after earnings are allowed. */
   heldBackByEarnings: { ticker: string; days: number | null }[];
   earningsWatch: EarningsWatchRow[];
@@ -249,6 +263,14 @@ export async function getWheelResults(f: WheelFilters = DEFAULT_FILTERS, today =
       // no-op today, reserved
     }
   }
+  const sectors = [...new Set(graded
+    .map((g) => g.row.sector?.trim())
+    .filter((sector): sector is string => Boolean(sector)))].sort((a, b) => a.localeCompare(b));
+  if (f.sector) {
+    const selectedSector = f.sector.trim().toLocaleLowerCase("en-US");
+    eligible = eligible.filter((g) => g.row.sector?.trim().toLocaleLowerCase("en-US") === selectedSector);
+  }
+
   const scanBy = new Map(scans.map((s) => [s.ticker, s]));
 
   const rows: WheelRow[] = [];
@@ -283,7 +305,7 @@ export async function getWheelResults(f: WheelFilters = DEFAULT_FILTERS, today =
 
     const scan = scanPuts(s.contracts as OptionContract[], ctx, f.params, today);
     for (const [k, n] of Object.entries(scan.rejected)) rejected[k as RejectReason] = (rejected[k as RejectReason] ?? 0) + (n ?? 0);
-    let cands = scan.candidates;
+    let cands = filterCandidatesByCollateral(scan.candidates, f.maxCollateral);
     if (f.minScore != null && Number.isFinite(f.minScore) && f.minScore > 0) {
       cands = cands.filter((c) => c.score >= f.minScore);
     }
@@ -296,13 +318,14 @@ export async function getWheelResults(f: WheelFilters = DEFAULT_FILTERS, today =
       }
       continue;
     }
-    rows.push({ g, ctx, best: cands[0], count: cands.length, source: s.source, fallbackReason: s.fallbackReason, scannedAt: s.scannedAt });
+    rows.push({ g, ctx, best: cands[0], count: cands.length, source: s.source, fallbackReason: s.fallbackReason, scannedAt: s.scannedAt, stale: scanIsStale(s.scannedAt) });
   }
   rows.sort((a, b) => comparePutCandidates(a.best, b.best, f.sortBy));
   earningsWatch.sort((a, b) => a.days - b.days);
   const universe = stale.length;
   return {
     rows,
+    sectors,
     heldBackByEarnings: held,
     earningsWatch,
     rejected,

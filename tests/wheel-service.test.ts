@@ -30,6 +30,17 @@ describe("comparePutCandidates", () => {
   });
 });
 
+describe("filterCandidatesByCollateral", () => {
+  it("retains affordable alternatives before the best contract is selected", () => {
+    const candidates = [
+      { cash: 60_000, score: 90, annRoc: 0.2 },
+      { cash: 30_000, score: 70, annRoc: 0.1 },
+    ];
+    expect(m.filterCandidatesByCollateral(candidates, 35_000)).toEqual([candidates[1]]);
+    expect(m.filterCandidatesByCollateral(candidates, null)).toEqual(candidates);
+  });
+});
+
 describe("scanIsStale", () => {
   const tue11et = new Date("2026-10-20T15:00:00Z"); // market open
   const sat = new Date("2026-10-24T15:00:00Z"); // closed
