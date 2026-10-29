@@ -36,6 +36,7 @@ export function LiveWheelView() {
   const [message, setMessage] = useState<string | null>(null);
   const [entry, setEntry] = useState({ ticker: "", side: "put_sold", strike: "", expiration: "", premium: "", quantity: "1", costBasis: "", openedAt: new Date().toISOString().slice(0, 10), notes: "" });
   const journalFormRef = useRef<HTMLFormElement>(null);
+  const chainRequestIdRef = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -67,9 +68,18 @@ export function LiveWheelView() {
   };
 
   const loadChain = async (ticker: string) => {
+    const requestId = chainRequestIdRef.current + 1;
+    chainRequestIdRef.current = requestId;
     setChainTicker(ticker); setChain(null); setError(null);
-    try { setChain(await requestJson<Chain>(`/api/wheel/chain?symbol=${encodeURIComponent(ticker)}&type=both&dteMin=7&dteMax=70`)); }
-    catch (e) { setError(e instanceof Error ? e.message : "Option chain could not be loaded"); setChainTicker(null); }
+    try {
+      const snapshot = await requestJson<Chain>(`/api/wheel/chain?symbol=${encodeURIComponent(ticker)}&type=both&dteMin=7&dteMax=70`);
+      if (chainRequestIdRef.current === requestId) setChain(snapshot);
+    } catch (e) {
+      if (chainRequestIdRef.current === requestId) setError(e instanceof Error ? e.message : "Option chain could not be loaded");
+    } finally {
+      // Clear only this request's loading state; a newer ticker may still be loading.
+      if (chainRequestIdRef.current === requestId) setChainTicker(null);
+    }
   };
 
   const prefillPosition = (ticker: string, contract: OptionContract, costBasis: number | null) => {
