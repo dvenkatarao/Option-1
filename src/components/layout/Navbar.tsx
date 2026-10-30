@@ -77,11 +77,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             <label className="relative hidden w-48 shrink-0 lg:block xl:w-64">
-              <span className="sr-only">Search ETFs and Wheel stocks</span>
+              <span className="sr-only">Search ETFs or live stocks by ticker and company name</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search ETF / Wheel Stock..."
+                maxLength={80}
+                placeholder="Search ETFs / live stocks…"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className="h-9 w-full rounded-lg border border-slate-800 bg-slate-900/90 pl-9 pr-8 text-xs text-slate-200 outline-none transition placeholder:text-slate-500 focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/40"

@@ -21,7 +21,13 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export function LiveWheelView() {
+export function LiveWheelView({
+  initialDetailTicker = null,
+  onInitialDetailTickerOpened,
+}: {
+  initialDetailTicker?: string | null;
+  onInitialDetailTickerOpened?: () => void;
+}) {
   const [results, setResults] = useState<LiveWheelResults | null>(null);
   const [positions, setPositions] = useState<WheelPosition[]>([]);
   const [filterValues, setFilterValues] = useState<WheelFilterState>(DEFAULT_WHEEL_FILTERS);
@@ -40,6 +46,15 @@ export function LiveWheelView() {
   const [entry, setEntry] = useState({ ticker: "", side: "put_sold", strike: "", expiration: "", premium: "", quantity: "1", costBasis: "", openedAt: new Date().toISOString().slice(0, 10), notes: "" });
   const journalFormRef = useRef<HTMLFormElement>(null);
   const chainRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!initialDetailTicker) return;
+    const timer = window.setTimeout(() => {
+      setDetailTicker(initialDetailTicker);
+      onInitialDetailTickerOpened?.();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [initialDetailTicker, onInitialDetailTickerOpened]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
