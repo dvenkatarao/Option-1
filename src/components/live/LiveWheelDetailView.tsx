@@ -325,7 +325,7 @@ export function LiveWheelDetailView({ ticker, onClose, onUseContract }: { ticker
             <Metric compact label="Beta" value={stock.fundamentals?.beta?.toFixed(2) ?? "N/A"} />
             <Metric compact label="Next earnings" value={stock.events?.nextEarnings ?? "Unknown"} hint={stock.events?.earningsEstimated ? "Provider date window; estimated" : undefined} />
           </section>
-          <section aria-label="Additional fundamentals" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          <section aria-label="Additional fundamentals" className="grid grid-cols-2 gap-x-2 gap-y-4 sm:grid-cols-3 xl:grid-cols-6">
             <Metric compact label="Forward P/E" value={multiple(stock.fundamentals?.forwardPE)} />
             <Metric compact label="Trailing P/E" value={multiple(stock.fundamentals?.trailingPE)} />
             <Metric compact label="Operating margin" value={pct(stock.fundamentals?.operatingMargin)} />

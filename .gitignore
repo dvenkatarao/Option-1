@@ -3,7 +3,7 @@ node_modules/
 .pnp/
 .pnp.js
 
-# Vite / Next build output
+# Build output
 dist/
 build/
 .vite/

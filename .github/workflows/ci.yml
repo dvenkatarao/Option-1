@@ -20,6 +20,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=moderate
+      - name: Audit all dependencies for high and critical advisories
+        run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
