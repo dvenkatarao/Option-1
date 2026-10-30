@@ -26,6 +26,7 @@ interface ETFDetailModalProps {
   onClose: () => void;
   onAddToCompare: (symbol: string) => void;
   isCompared: boolean;
+  showCompareActions?: boolean;
   onOpenCompare: () => void;
 }
 
@@ -34,6 +35,7 @@ export const ETFDetailModal: React.FC<ETFDetailModalProps> = ({
   onClose,
   onAddToCompare,
   isCompared,
+  showCompareActions = true,
   onOpenCompare,
 }) => {
   const [activeTab, setActiveTab] = useState<'nav_erosion' | 'holdings' | 'dividends' | 'strategy' | 'risk'>('nav_erosion');
@@ -68,25 +70,29 @@ export const ETFDetailModal: React.FC<ETFDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            <button
-              onClick={() => onAddToCompare(etf.symbol)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
-                isCompared
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                  : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
-              }`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{isCompared ? 'In Compare List' : '+ Add to Compare'}</span>
-            </button>
+            {showCompareActions && (
+              <>
+                <button
+                  onClick={() => onAddToCompare(etf.symbol)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
+                    isCompared
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                      : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{isCompared ? 'In Compare List' : '+ Add to Compare'}</span>
+                </button>
 
-            {isCompared && (
-              <button
-                onClick={onOpenCompare}
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition"
-              >
-                Launch Compare
-              </button>
+                {isCompared && (
+                  <button
+                    onClick={onOpenCompare}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition"
+                  >
+                    Launch Compare
+                  </button>
+                )}
+              </>
             )}
 
             <button

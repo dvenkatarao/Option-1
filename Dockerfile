@@ -14,6 +14,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time.
+ARG NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS=false
+ENV NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS=${NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS}
 # No database is contacted at build time (all pages are force-dynamic); db/index.ts tolerates the build phase.
 RUN npm run build
 

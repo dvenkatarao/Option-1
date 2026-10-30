@@ -5,7 +5,7 @@ WheelCore is an ETF, portfolio, macro and options-wheel research interface. This
 ## Workstations
 
 - **Mission Control** — original dashboard and local sample data.
-- **ETF Intelligence** — original screener and comparison views, plus a provider-backed ETF universe screener and fund detail dossier.
+- **ETF Intelligence** — provider-backed ETF universe screener and fund detail dossier. The legacy illustrative screener and sample comparison are hidden by default and can be enabled with `NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS=true`.
 - **Wheel Strategy Lab** — original scanner, simulator and campaign tracker, plus provider-backed stock/option-chain scanning and a persistent wheel journal.
 - **Portfolio Studio** — original educational portfolio simulator, plus PostgreSQL-backed portfolios, holdings, CSV imports, transactions, income and risk analytics.
 - **Research Academy** — original educational material, plus live macro signals, news/events, transparent ETF rankings, source health and data-coverage tools.
@@ -59,6 +59,7 @@ See [`.env.example`](.env.example) and [`DEPLOYMENT.md`](DEPLOYMENT.md). Key set
 - `ALPACA_API_KEY` / `ALPACA_SECRET_KEY`, `OPTIONS_PROVIDER`, `ALPACA_OPTIONS_FEED` — options-chain provider configuration.
 - `WHEEL_SCANNER`, `WHEEL_EXTRA_SYMBOLS`, `QUOTE_SNAPSHOTS` — background refresh/snapshot behavior.
 - `FRED_API_KEY`, `FINNHUB_API_KEY` — optional enhanced source access.
+- `NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS` — defaults to `false`, showing Live ETF Research without the bundled sample screener/comparison tabs. Set to `true` to reveal them; restart `next dev` locally or rebuild/redeploy production. This is a public UI flag, not a secret.
 
 Live SnapTrade/Plaid broker connections are not implemented; the API returns an explicit not-supported response. Use CSV imports or manual ledger entries for real positions. Sample/demo portfolios are explicitly labeled.
 
