@@ -332,7 +332,7 @@ export function WheelSimulatorView({
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
               <Metric label="Company" value={selectedRow.g.row.name ?? "Name unavailable"} />
               <Metric label="Quality grade" value={selectedRow.g.grade ?? "N/A"} />
-              <Metric label="Wheel score" value={`${Number.isFinite(selectedRow.best.score) ? selectedRow.best.score.toFixed(0) : "N/A"}/100`} hint="Ranking heuristic, not probability of profit." />
+              <Metric label="Wheel score" value={Number.isFinite(selectedRow.best.score) ? `${selectedRow.best.score.toFixed(0)} pts` : "N/A"} hint="Higher scores rank ahead when score sorting is selected; ranking heuristic, not probability of profit." />
               <Metric label="IV rank" value={results?.ivRanks[selectedRow.g.row.ticker] == null ? "N/A" : `${results.ivRanks[selectedRow.g.row.ticker]}%`} />
               <Metric label="Put OTM cushion" value={fractionPct(putOtm != null ? putOtm / 100 : null)} />
               <Metric label="Qualifying puts" value={String(selectedRow.count)} />
