@@ -252,8 +252,13 @@ export function LiveEtfScreenerView() {
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-400"><Database className="h-4 w-4" /> Provider-backed ETF universe</div>
-            <h2 className="mt-2 text-xl font-extrabold tracking-tight text-white">Live ETF Research</h2>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">The familiar multi-filter table and Inspect workspace, now populated from stored provider data. Unsupported fields stay N/A; source and freshness context remain visible.</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-extrabold text-white">ETF Intelligence &amp; Screener</h1>
+              <span aria-live="polite" className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-bold text-emerald-400">
+                {loading ? "Loading funds…" : data ? `${filteredRows.length} Funds Found` : "Count unavailable"}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">Research dividends, ex-dates, expense drag, NAV erosion risks, underlying holdings, and long-term total return.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => void load()} disabled={loading || refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/50 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button>
