@@ -25,6 +25,9 @@ import { WHEEL_STOCKS, ACTIVE_CAMPAIGNS } from './data/wheelData';
 import { ETFData, WheelStock, OptionContract, ActiveWheelCampaign } from './types';
 import { RefreshCw, Zap } from 'lucide-react';
 
+const SAMPLE_ETF_SCREENS_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS === 'true';
+
 type GlobalStockSearchResponse = {
   query: string;
   profiles: LiveStockSearchProfile[];
@@ -49,11 +52,13 @@ export function App() {
   const [liveStockSearch, setLiveStockSearch] = useState<GlobalStockSearchResponse>({ query: '', profiles: [], tickerLookup: null });
   const [liveStockSearchLoading, setLiveStockSearchLoading] = useState(false);
   const [liveStockSearchError, setLiveStockSearchError] = useState<string | null>(null);
-  const [selectedForCompare, setSelectedForCompare] = useState<string[]>(['VOO', 'SCHD', 'JEPI']);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>(
+    SAMPLE_ETF_SCREENS_ENABLED ? ['VOO', 'SCHD', 'JEPI'] : [],
+  );
   const [isCompareViewOpen, setIsCompareViewOpen] = useState(false);
 
-  // Workstation view toggles: keep the original demo tools beside provider-backed services.
-  const [showLiveEtfScreener, setShowLiveEtfScreener] = useState(false);
+  // With sample ETF screens disabled, enter the ETF workstation directly on live research.
+  const [showLiveEtfScreener, setShowLiveEtfScreener] = useState(!SAMPLE_ETF_SCREENS_ENABLED);
   const [portfolioView, setPortfolioView] = useState<'studio' | 'accounts'>('studio');
   const [researchView, setResearchView] = useState<'academy' | 'live'>('academy');
 
@@ -171,7 +176,7 @@ export function App() {
           setResearchView('live');
           setIsCompareViewOpen(false);
         }}
-        selectedCompareCount={selectedForCompare.length}
+        selectedCompareCount={SAMPLE_ETF_SCREENS_ENABLED ? selectedForCompare.length : 0}
       />
 
       {/* Main Content Area */}
@@ -281,16 +286,18 @@ export function App() {
           <div className="space-y-6">
             {/* Keep the original workstation views and add provider-backed research alongside them. */}
             <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
-              <button
-                onClick={() => { setShowLiveEtfScreener(false); setIsCompareViewOpen(false); }}
-                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                  !showLiveEtfScreener && !isCompareViewOpen
-                    ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                ETF Screener & Multi-Filter Table
-              </button>
+              {SAMPLE_ETF_SCREENS_ENABLED && (
+                <button
+                  onClick={() => { setShowLiveEtfScreener(false); setIsCompareViewOpen(false); }}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                    !showLiveEtfScreener && !isCompareViewOpen
+                      ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  ETF Screener & Multi-Filter Table
+                </button>
+              )}
 
               <button
                 onClick={() => { setShowLiveEtfScreener(true); setIsCompareViewOpen(false); }}
@@ -303,38 +310,40 @@ export function App() {
                 Live ETF Research
               </button>
 
-              <button
-                onClick={() => setIsCompareViewOpen(true)}
-                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                  isCompareViewOpen
-                    ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Head-to-Head Comparison</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-slate-200">
-                  {selectedForCompare.length}
-                </span>
-              </button>
+              {SAMPLE_ETF_SCREENS_ENABLED && (
+                <button
+                  onClick={() => setIsCompareViewOpen(true)}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                    isCompareViewOpen
+                      ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>Head-to-Head Comparison</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-slate-200">
+                    {selectedForCompare.length}
+                  </span>
+                </button>
+              )}
             </div>
 
-            {!isCompareViewOpen ? (
-              showLiveEtfScreener ? <LiveEtfScreenerView /> : (
-                <ETFScreenerView
-                  etfs={etfs}
-                  onSelectETF={(etf) => setSelectedETF(etf)}
-                  selectedForCompare={selectedForCompare}
-                  onToggleCompare={handleToggleCompare}
-                  onOpenCompare={() => setIsCompareViewOpen(true)}
-                />
-              )
-            ) : (
+            {SAMPLE_ETF_SCREENS_ENABLED && isCompareViewOpen ? (
               <ETFCompareView
                 allETFs={etfs}
                 selectedSymbols={selectedForCompare}
                 onToggleCompare={handleToggleCompare}
                 onSelectETF={(etf) => setSelectedETF(etf)}
               />
+            ) : SAMPLE_ETF_SCREENS_ENABLED && !showLiveEtfScreener ? (
+              <ETFScreenerView
+                etfs={etfs}
+                onSelectETF={(etf) => setSelectedETF(etf)}
+                selectedForCompare={selectedForCompare}
+                onToggleCompare={handleToggleCompare}
+                onOpenCompare={() => setIsCompareViewOpen(true)}
+              />
+            ) : (
+              <LiveEtfScreenerView />
             )}
           </div>
         )}
@@ -472,9 +481,12 @@ export function App() {
           onClose={() => setSelectedETF(null)}
           onAddToCompare={handleToggleCompare}
           isCompared={selectedForCompare.includes(selectedETF.symbol)}
+          showCompareActions={SAMPLE_ETF_SCREENS_ENABLED}
           onOpenCompare={() => {
+            if (!SAMPLE_ETF_SCREENS_ENABLED) return;
             setSelectedETF(null);
             setActiveTab('etfs');
+            setShowLiveEtfScreener(false);
             setIsCompareViewOpen(true);
           }}
         />
