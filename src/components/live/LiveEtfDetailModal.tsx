@@ -191,6 +191,8 @@ export function LiveEtfDetailModal({
   onClose,
   isCompared,
   compareLimitReached,
+  compareCount,
+  showLaunchCompare = true,
   onToggleCompare,
   onOpenCompare,
 }: {
@@ -198,6 +200,8 @@ export function LiveEtfDetailModal({
   onClose: () => void;
   isCompared: boolean;
   compareLimitReached: boolean;
+  compareCount: number;
+  showLaunchCompare?: boolean;
   onToggleCompare: (row: ScreenRow) => void;
   onOpenCompare: () => void;
 }) {
@@ -249,7 +253,8 @@ export function LiveEtfDetailModal({
             <button onClick={() => onToggleCompare(row)} disabled={compareLimitReached} title={compareLimitReached ? "Remove a selected fund from the live compare list before adding another" : "Add this live ETF to the comparison"} className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${isCompared ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300" : "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"}`}>
               <CheckCircle2 className="h-3.5 w-3.5" />{isCompared ? "In Compare List" : compareLimitReached ? "Compare list full" : "+ Add to Compare"}
             </button>
-            {isCompared && <button onClick={onOpenCompare} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-500">Launch Compare</button>}
+            {isCompared && showLaunchCompare && compareCount >= 2 && <button onClick={onOpenCompare} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-500">Launch Compare</button>}
+            {isCompared && showLaunchCompare && compareCount < 2 && <span className="text-[10px] text-slate-500">Select another ETF to compare</span>}
             <button onClick={onClose} className="ml-1 rounded-lg bg-slate-800 p-1.5 text-slate-400 transition hover:bg-slate-700 hover:text-white" aria-label="Close live ETF details"><X className="h-5 w-5" /></button>
           </div>
         </header>
