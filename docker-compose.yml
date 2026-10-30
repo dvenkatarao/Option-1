@@ -37,7 +37,10 @@ services:
       SEC_USER_AGENT: ${SEC_USER_AGENT:?set SEC_USER_AGENT in .env (include your email)}
       FRED_API_KEY: ${FRED_API_KEY:-}
       FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
-      # Options wheel: Alpaca is the primary option-chain source, Yahoo the automatic backup.
+      # Options wheel: connected Schwab Market Data -> configured Alpaca -> Yahoo in auto mode.
+      SCHWAB_CLIENT_ID: ${SCHWAB_CLIENT_ID:-}
+      SCHWAB_CLIENT_SECRET: ${SCHWAB_CLIENT_SECRET:-}
+      SCHWAB_REDIRECT_URI: ${SCHWAB_REDIRECT_URI:-}
       ALPACA_API_KEY: ${ALPACA_API_KEY:-}
       ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
       ALPACA_PAPER: ${ALPACA_PAPER:-true}

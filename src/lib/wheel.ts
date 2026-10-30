@@ -34,7 +34,7 @@ export type OptionContract = {
   volume: number | null;
   /** Provider quote timestamp when included in the payload (not the fetch time). */
   quoteTimestamp?: string | null;
-  source: "alpaca" | "yahoo";
+  source: "schwab" | "alpaca" | "yahoo";
 };
 
 export type StockCtx = {

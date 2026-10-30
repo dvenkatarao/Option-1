@@ -36,6 +36,27 @@
       "when": 1793071738626,
       "tag": "0004_option_quote_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793396474774,
+      "tag": "0005_wild_the_anarchist",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793396971568,
+      "tag": "0006_many_justin_hammer",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793397374856,
+      "tag": "0007_closed_blockbuster",
+      "breakpoints": true
     }
   ]
 }

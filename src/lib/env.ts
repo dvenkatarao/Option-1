@@ -37,15 +37,20 @@ const envSchema = z.object({
   POLYGON_API_KEY: optionalString,
   /** Automatic daily ETF universe discovery + bounded hydration; defaults on in production when POLYGON_API_KEY is set. */
   ETF_UNIVERSE_DISCOVERY: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).optional()),
-  /** Alpaca market-data + trading keys (free account). When both are set Alpaca is the primary option-chain source. */
+  /** Schwab Market Data OAuth app. Tokens are stored encrypted in Postgres; never expose these in the browser. */
+  SCHWAB_CLIENT_ID: optionalString,
+  SCHWAB_CLIENT_SECRET: optionalString,
+  /** Must exactly match the callback URL registered in the Schwab Developer Portal. */
+  SCHWAB_REDIRECT_URI: optionalString,
+  /** Alpaca market-data + trading keys (free account). When both are set Alpaca is an option-chain source. */
   ALPACA_API_KEY: optionalString,
   ALPACA_SECRET_KEY: optionalString,
   /** true = keys belong to a paper account (paper-api.alpaca.markets); false = live account. */
   ALPACA_PAPER: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("true")),
   /** indicative = free feed; opra = full feed (needs an Alpaca market-data subscription). */
   ALPACA_OPTIONS_FEED: z.preprocess(emptyToUndefined, z.enum(["indicative", "opra"]).default("indicative")),
-  /** auto = Alpaca first, Yahoo as backup; alpaca / yahoo = force one provider. */
-  OPTIONS_PROVIDER: z.preprocess(emptyToUndefined, z.enum(["auto", "alpaca", "yahoo"]).default("auto")),
+  /** auto = connected Schwab, then Alpaca, then Yahoo; schwab / alpaca / yahoo = force one provider. */
+  OPTIONS_PROVIDER: z.preprocess(emptyToUndefined, z.enum(["auto", "schwab", "alpaca", "yahoo"]).default("auto")),
   /** Background stock/option scanner for the Wheel pages. Default: on in production, off elsewhere. */
   WHEEL_SCANNER: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).optional()),
   /** Comma-separated extra tickers to add to the S&P 500 scan universe. */

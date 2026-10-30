@@ -61,9 +61,11 @@ describe("access gate", () => {
     (process.env as Record<string, string>).NODE_ENV = "production";
     expect((await proxy(req("/portfolio"))).status).toBe(503);
   });
-  it("leaves the health probe public", async () => {
+  it("leaves the health probe and exact Schwab OAuth callback public", async () => {
     process.env.APP_PASSWORD = "correct-horse-battery";
     expect((await proxy(req("/api/health"))).status).toBe(200);
+    expect((await proxy(req("/api/v1/auth/callback"))).status).toBe(200);
+    expect((await proxy(req("/api/v1/auth/callback/extra"))).status).toBe(401);
   });
   it("blocks cross-origin state-changing requests", async () => {
     process.env.APP_PASSWORD = "correct-horse-battery";

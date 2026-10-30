@@ -11,10 +11,13 @@ WheelCore keeps the existing dashboard, screener, simulator, and research academ
 | `SEC_USER_AGENT` | `AppName you@domain.com` (SEC EDGAR requirement). |
 | `SEED_DEMO_DATA=true` | Optional. Creates 3 labelled demo portfolios once, on first visit. Good for test environments. |
 | `FRED_API_KEY`, `FINNHUB_API_KEY` | Optional. |
-| `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` | Optional but recommended for the Options Wheel pages: Alpaca is the **primary** option-chain source (bid/ask, greeks, implied volatility, open interest). Without them, or if Alpaca fails, Yahoo Finance is the automatic backup (deltas modelled, marked ≈). |
-| `ALPACA_PAPER`, `ALPACA_OPTIONS_FEED`, `OPTIONS_PROVIDER` | `true`/`false` (paper vs live keys), `indicative`/`opra` (free vs paid feed), `auto`/`alpaca`/`yahoo`. Blank values fall back to the defaults. |
+| `SCHWAB_CLIENT_ID`, `SCHWAB_CLIENT_SECRET`, `SCHWAB_REDIRECT_URI` | Optional Schwab Market Data OAuth app. Register the exact redirect URL ending in `/api/v1/auth/callback`. Connected Schwab data is tried first in `auto`; OAuth tokens are encrypted with `PORTFOLIO_ENCRYPTION_KEY`. The app does not use account/trading scopes. |
+| `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` | Optional options-chain source (bid/ask, Greeks, implied volatility, open interest). In `auto` mode it follows connected Schwab and precedes Yahoo Finance. |
+| `ALPACA_PAPER`, `ALPACA_OPTIONS_FEED`, `OPTIONS_PROVIDER` | `true`/`false` (paper vs live keys), `indicative`/`opra` (free vs paid feed), `auto`/`schwab`/`alpaca`/`yahoo`. Blank values fall back to the defaults. |
 | `WHEEL_SCANNER` | Background refresh of stock data and option scans while the app runs (default on in production). Uses tables `stocks` and `wheel_scans`, created by migration `0002`. |
 | `WHEEL_EXTRA_SYMBOLS`, `RISK_FREE_RATE` | Optional: extra tickers for the ~330-stock universe; override the risk-free rate used to model deltas. |
+
+Schwab Market Data setup: after setting server environment variables, open Wheel Strategy Lab and use **Connect**; then use **Test SPY chain** for the first direct provider request. `SCHWAB_REDIRECT_URI` must exactly match the portal's registered callback, including host and port. The portal's `127.0.0.1:8000` callback works only when the browser can reach the app or a proxy on that exact address/port. The test displays Schwab's `isDelayed` flag and provider quote timestamps when returned; absence of the delayed flag is not proof of real-time entitlement. No Schwab credentials or live response were available during implementation, so verify the initial chain's IV and freshness before relying on them.
 
 Health probe: `GET /api/health` (public, returns `{ok:true}` when the DB answers).
 
@@ -48,4 +51,4 @@ Build from the `Dockerfile`, attach Postgres, set the variables above, and healt
 * **Upstream data:** Yahoo Finance endpoints are unofficial and may rate-limit or change; the app keeps and badges stale cached data when a provider fails.
 
 ## Upgrading an existing deployment
-Migrations run automatically on container start (`0001` quote snapshots, `0002` wheel tables). Rebuild with `docker compose build --no-cache web && docker compose up -d`. **Never** run `docker compose down -v`: it deletes the database volume. Open **Wheel Strategy Lab → Live Provider Scanner & Journal** to hydrate the stock universe and scan option chains in small batches. The original strategy simulator and tracker remain available alongside it; live scans do not place orders.
+Migrations run automatically on container start; the current set includes the encrypted Schwab connection table and option-chain delay/staleness metadata. Rebuild with `docker compose build --no-cache web && docker compose up -d`. **Never** run `docker compose down -v`: it deletes the database volume. Open **Wheel Strategy Lab → Live Provider Scanner & Journal** to hydrate the stock universe and scan option chains in small batches. The original strategy simulator and tracker remain available alongside it; live scans do not place orders.

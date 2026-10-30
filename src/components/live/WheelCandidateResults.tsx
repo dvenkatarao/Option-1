@@ -99,10 +99,13 @@ function CandidateCard({
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px]">
           <span className="max-w-full break-words rounded-full border border-slate-800 bg-slate-950 px-2 py-1 text-slate-400">{row.source ?? "Provider source unavailable"}</span>
           {row.stale
-            ? <span title="This scan is older than the expected freshness window." className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-200">Stale scan</span>
+            ? <span title={row.providerStale ? "The provider returned a stale-on-error cached chain." : "This scan is older than the expected freshness window."} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-200">{row.providerStale ? "Stale provider data" : "Stale scan"}</span>
             : <span title="This scan is within the expected freshness window." className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">Fresh scan</span>}
           <span className="text-slate-500">Scanned {timestamp(row.scannedAt)}</span>
         </div>
+        {row.isDelayed === true && <p className="mt-2 text-[10px] text-amber-200">Provider flagged delayed quotes.</p>}
+        {row.isDelayed === false && row.source === "schwab" && <p className="mt-2 text-[10px] text-slate-500">Schwab did not mark the chain delayed; entitlement remains unverified.</p>}
+        {row.isDelayed === null && row.source === "schwab" && <p className="mt-2 text-[10px] text-slate-500">Schwab delay flag unavailable; entitlement remains unverified.</p>}
         {row.fallbackReason && <p className="mt-2 break-words text-[10px] leading-relaxed text-amber-200/80">Fallback context: {row.fallbackReason}</p>}
       </div>
 
@@ -211,7 +214,7 @@ export function WheelCandidateResults({
                   <td className="px-3 py-3 font-mono text-slate-300">{cash(row.best.cash)}</td>
                   <td className="px-3 py-3 font-mono text-slate-300">{cash(row.best.breakeven)}<div className="text-[9px] text-slate-500">{pct(row.best.breakevenCushion)} cushion</div></td>
                   <td className="px-3 py-3"><span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[9px] text-cyan-200">{row.best.account.flag}</span></td>
-                  <td className="px-3 py-3"><div className="flex flex-wrap gap-1"><button onClick={() => onOpenDetail(row.g.row.ticker)} className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 text-[10px] text-emerald-200 hover:bg-emerald-500/10">Detail workspace</button><button onClick={() => onLoadChain(row.g.row.ticker)} className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[10px] text-slate-300 hover:text-white">{chainTicker === row.g.row.ticker ? "Loading…" : "Chain snapshot"}</button></div><div className="mt-1 text-[9px] text-slate-500">{row.source ?? "Provider"} · {timestamp(row.scannedAt)}</div>{row.stale && <div className="mt-1 text-[9px] text-amber-300">Stale scan</div>}{row.fallbackReason && <div className="mt-1 max-w-48 text-[9px] leading-relaxed text-amber-200/70">Fallback: {row.fallbackReason}</div>}</td>
+                  <td className="px-3 py-3"><div className="flex flex-wrap gap-1"><button onClick={() => onOpenDetail(row.g.row.ticker)} className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 text-[10px] text-emerald-200 hover:bg-emerald-500/10">Detail workspace</button><button onClick={() => onLoadChain(row.g.row.ticker)} className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[10px] text-slate-300 hover:text-white">{chainTicker === row.g.row.ticker ? "Loading…" : "Chain snapshot"}</button></div><div className="mt-1 text-[9px] text-slate-500">{row.source ?? "Provider"} · {timestamp(row.scannedAt)}</div>{row.stale && <div className="mt-1 text-[9px] text-amber-300">{row.providerStale ? "Stale provider data" : "Stale scan"}</div>}{row.isDelayed === true && <div className="mt-1 text-[9px] text-amber-300">Provider flagged delayed</div>}{row.isDelayed === false && row.source === "schwab" && <div className="mt-1 text-[9px] text-slate-500">Not marked delayed; entitlement unverified</div>}{row.isDelayed === null && row.source === "schwab" && <div className="mt-1 text-[9px] text-slate-500">Delay flag unavailable; entitlement unverified</div>}{row.fallbackReason && <div className="mt-1 max-w-48 text-[9px] leading-relaxed text-amber-200/70">Fallback: {row.fallbackReason}</div>}</td>
                 </tr>
               ))}
             </tbody>

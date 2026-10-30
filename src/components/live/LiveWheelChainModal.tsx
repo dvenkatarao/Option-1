@@ -11,6 +11,7 @@ type LiveChainSnapshot = {
   source: string;
   fetchedAt: string | null;
   stale: boolean;
+  isDelayed?: boolean | null;
   fallbackReasons?: string[];
   contracts: OptionContract[];
 };
@@ -108,6 +109,9 @@ export function LiveWheelChainModal({
               <h2 className="font-mono text-lg font-extrabold text-white sm:text-xl">{ticker} option chain</h2>
               {chain?.stale && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-200">Cached / stale</span>}
               {chain && !chain.stale && <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-200">Provider snapshot</span>}
+              {chain?.isDelayed === true && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-200">Provider flagged delayed</span>}
+              {chain?.source.includes("schwab") && chain?.isDelayed === false && <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-400">Schwab not marked delayed · entitlement unverified</span>}
+              {chain?.source.includes("schwab") && (chain?.isDelayed === null || chain?.isDelayed === undefined) && <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-400">Schwab delay flag unavailable</span>}
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-400">
               <span>Underlying <b className="font-mono text-slate-200">{chain ? cash(chain.price) : "Loading…"}</b></span>

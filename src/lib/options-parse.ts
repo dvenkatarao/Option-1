@@ -3,6 +3,7 @@
  *
  * Alpaca: market data `snapshots` (quote, greeks, implied volatility) joined with trading `option_contracts` (open interest).
  * Yahoo:  v7/finance/options (quote, implied volatility, open interest; NO greeks - delta is modelled afterwards).
+ * Schwab: marketdata/v1/chains (expiration maps, provider quotes/Greeks, delayed flag and underlying price).
  */
 import { bsGreeks } from "./bs";
 import { daysBetween, type OptionContract, type OptionType } from "./wheel";
@@ -124,6 +125,97 @@ export function parseYahooResult(json: unknown, type: OptionType): { expirations
   };
 }
 
+type SchwabOption = Record<string, unknown>;
+
+const schwabQuoteTime = (value: unknown): string | null => {
+  const n = num(value);
+  if (n == null || n <= 0) return null;
+  const date = new Date(n > 10_000_000_000 ? n : n * 1000);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+};
+
+function schwabExpiration(value: unknown, mapKey: string): string | null {
+  const fallback = mapKey.split(":")[0];
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const n = num(value);
+  if (n != null && n > 0) {
+    const date = new Date(n > 10_000_000_000 ? n : n * 1000);
+    if (Number.isFinite(date.getTime())) return date.toISOString().slice(0, 10);
+  }
+  if (typeof value === "string") {
+    const date = new Date(value);
+    if (Number.isFinite(date.getTime())) return date.toISOString().slice(0, 10);
+  }
+  return /^\d{4}-\d{2}-\d{2}$/.test(fallback) ? fallback : null;
+}
+
+/**
+ * Parse Schwab's expiration/strike maps into the shared chain shape.
+ * Public Schwab-chain examples show `volatility` in percentage points (for example, 36.882); normalize to a fraction.
+ * This unit has not been confirmed against this deployment's live response, so validate IV on the first authorized chain.
+ */
+export function parseSchwabChain(json: unknown, type: OptionType): { contracts: OptionContract[]; underlyingPrice: number | null; isDelayed: boolean | null } {
+  if (!json || typeof json !== "object") throw new Error("Schwab options: empty response");
+  const root = json as Record<string, unknown>;
+  const status = typeof root.status === "string" ? root.status.toUpperCase() : null;
+  if (status && status !== "SUCCESS") throw new Error(`Schwab options: provider status ${status}`);
+
+  const mapValue = type === "put" ? root.putExpDateMap : root.callExpDateMap;
+  const expMap = mapValue && typeof mapValue === "object" ? mapValue as Record<string, unknown> : {};
+  const contracts: OptionContract[] = [];
+  for (const [expirationKey, strikeValue] of Object.entries(expMap)) {
+    if (!strikeValue || typeof strikeValue !== "object") continue;
+    for (const [strikeKey, optionValue] of Object.entries(strikeValue as Record<string, unknown>)) {
+      if (!Array.isArray(optionValue)) continue;
+      for (const item of optionValue) {
+        if (!item || typeof item !== "object") continue;
+        const raw = item as SchwabOption;
+        const optionType = String(raw.putCall ?? (type === "put" ? "PUT" : "CALL")).toLowerCase();
+        if (optionType !== type) continue;
+        // Schwab's provider symbol pads the underlying with spaces; normalize to the compact OCC form used by the journal/history routes.
+        const symbol = typeof raw.symbol === "string" ? raw.symbol.replace(/\s+/g, "") : "";
+        const strike = num(raw.strikePrice) ?? num(strikeKey);
+        const expiration = schwabExpiration(raw.expirationDate, expirationKey);
+        if (!symbol || strike == null || !expiration) continue;
+
+        const delta = num(raw.delta);
+        const gamma = num(raw.gamma);
+        const theta = num(raw.theta);
+        const vega = num(raw.vega);
+        const rho = num(raw.rho);
+        const hasGreeks = [delta, gamma, theta, vega, rho].some((value) => value != null);
+        const volatility = num(raw.volatility);
+        contracts.push({
+          symbol,
+          type,
+          strike,
+          expiration,
+          bid: num(raw.bid),
+          ask: num(raw.ask),
+          last: num(raw.last),
+          delta,
+          deltaSource: delta == null ? null : "provider",
+          greeksSource: hasGreeks ? "provider" : null,
+          gamma,
+          theta,
+          vega,
+          rho,
+          iv: volatility == null || volatility <= 0 ? null : volatility / 100,
+          oi: num(raw.openInterest),
+          volume: num(raw.totalVolume),
+          quoteTimestamp: schwabQuoteTime(raw.quoteTimeInLong),
+          source: "schwab",
+        });
+      }
+    }
+  }
+
+  const underlying = root.underlying && typeof root.underlying === "object" ? root.underlying as Record<string, unknown> : {};
+  const underlyingPrice = num(root.underlyingPrice) ?? num(underlying.mark) ?? num(underlying.last) ?? num(underlying.lastPrice);
+  const isDelayed = typeof root.isDelayed === "boolean" ? root.isDelayed : null;
+  return { contracts, underlyingPrice: underlyingPrice != null && underlyingPrice > 0 ? underlyingPrice : null, isDelayed };
+}
+
 /**
  * Fill missing Greeks with a European Black-Scholes model from each contract's IV.
  * Provider values are never overwritten. Delta remains null when IV is unavailable.
@@ -152,21 +244,37 @@ export function addModelDeltas(contracts: OptionContract[], spot: number, rate: 
 /** True when at least one contract carries a two-sided quote; used to detect an empty/closed-market feed and fail over. */
 export const hasUsableQuotes = (cs: OptionContract[]) => cs.some((c) => c.bid != null && c.ask != null && c.ask >= c.bid && c.ask > 0);
 
-export type ChainSource = "alpaca" | "yahoo";
-export type ChainResult = { contracts: OptionContract[]; source: ChainSource; /** Why the primary provider was skipped, when a backup answered. */ fallbackReason: string | null };
+export type ChainSource = "schwab" | "alpaca" | "yahoo";
+export type ProviderChainData = OptionContract[] | { contracts: OptionContract[]; underlyingPrice?: number | null; isDelayed?: boolean | null };
+export type ChainResult = {
+  contracts: OptionContract[];
+  source: ChainSource;
+  underlyingPrice?: number | null;
+  /** Provider's chain-level delayed-data flag, when present; false does not guarantee real-time entitlement. */
+  isDelayed?: boolean | null;
+  /** Why an earlier provider was skipped, when a backup answered. */
+  fallbackReason: string | null;
+};
 
 /**
  * Try providers in order; the first that returns a chain with usable quotes wins.
  * Every failure is remembered so the UI can say honestly why the backup was used.
  */
-export async function runProviders(providers: { name: ChainSource; fn: () => Promise<OptionContract[]> }[]): Promise<ChainResult> {
+export async function runProviders(providers: { name: ChainSource; fn: () => Promise<ProviderChainData> }[]): Promise<ChainResult> {
   const failures: string[] = [];
   for (const p of providers) {
     try {
-      const contracts = await p.fn();
-      if (!contracts.length) throw new Error("returned no contracts");
-      if (!hasUsableQuotes(contracts)) throw new Error("returned no two-sided quotes");
-      return { contracts, source: p.name, fallbackReason: failures.length ? failures.join("; ") : null };
+      const result = await p.fn();
+      const data = Array.isArray(result) ? { contracts: result } : result;
+      if (!data.contracts.length) throw new Error("returned no contracts");
+      if (!hasUsableQuotes(data.contracts)) throw new Error("returned no two-sided quotes");
+      return {
+        contracts: data.contracts,
+        source: p.name,
+        underlyingPrice: "underlyingPrice" in data ? data.underlyingPrice : null,
+        isDelayed: "isDelayed" in data ? data.isDelayed ?? null : null,
+        fallbackReason: failures.length ? failures.join("; ") : null,
+      };
     } catch (e) {
       failures.push(`${p.name}: ${e instanceof Error ? e.message : String(e)}`);
     }

@@ -33,30 +33,36 @@ export const GET = handle(async (req: Request) => {
 
   const quotes = await yahooQuotes([symbol]).catch(() => []);
   const underlyingQuote = quotes.find((quote) => quote.symbol === symbol) ?? null;
-  const price = underlyingQuote?.price ?? null;
-  if (price == null || !(price > 0)) throw new ApiError(404, `No quote for ${symbol}`);
+  const stock = await getStock(symbol).catch(() => null);
+  const requestedPrice = underlyingQuote?.price ?? stock?.price ?? null;
 
-  let nextEarnings: string | null = null;
-  let divYield = 0;
-  try {
-    const stock = await getStock(symbol);
-    nextEarnings = stock?.events?.nextEarnings ?? null;
-    divYield = stock?.events?.dividendYield ?? 0;
-  } catch {
-    /* provider chain can still load without the stored stock row */
-  }
+  const nextEarnings = stock?.events?.nextEarnings ?? null;
+  const divYield = stock?.events?.dividendYield ?? 0;
   const want = parsed.data.type;
   const types = want === "both" ? (["put", "call"] as const) : ([want] as const);
-  const fetched = await Promise.all(
-    types.map((type) => getOptionChain({ symbol, type, price, dteMin, dteMax, divYield })),
-  );
+  let fetched: Awaited<ReturnType<typeof getOptionChain>>[];
+  try {
+    // Schwab can provide the underlying quote in the chain itself, so allow it to be the only quote source.
+    fetched = await Promise.all(
+      types.map((type) => getOptionChain({ symbol, type, price: requestedPrice ?? 0, dteMin, dteMax, divYield })),
+    );
+  } catch (error) {
+    if (requestedPrice == null || !(requestedPrice > 0)) throw new ApiError(404, `No usable underlying price or option chain for ${symbol}`);
+    throw error;
+  }
+  const providerPrice = fetched.find((result) => result.underlyingPrice != null && result.underlyingPrice > 0)?.underlyingPrice ?? requestedPrice;
+  if (providerPrice == null || !(providerPrice > 0)) throw new ApiError(404, `No underlying price for ${symbol}`);
 
   const fetchedAt = fetched.map((r) => r.fetchedAt).filter(Boolean).sort().slice(-1)[0] ?? null;
   const stale = fetched.some((r) => r.stale);
+  const delayFlags = fetched.map((result) => result.isDelayed);
+  const isDelayed = delayFlags.some((value) => value === true)
+    ? true
+    : delayFlags.every((value) => value === false) ? false : null;
   const responseContracts = fetched.flatMap((r) => r.contracts.slice(0, 1000));
   const snapshotContracts = fetched.flatMap((r) => r.contracts.slice(0, 120));
   if (fetchedAt) {
-    await recordOptionQuoteSnapshots({ ticker: symbol, underlyingPrice: price, contracts: snapshotContracts, fetchedAt, stale, marketState: underlyingQuote?.marketState }).catch((e) => {
+    await recordOptionQuoteSnapshots({ ticker: symbol, underlyingPrice: providerPrice, contracts: snapshotContracts, fetchedAt, stale, marketState: underlyingQuote?.marketState, isDelayed }).catch((e) => {
       console.warn("[options] quote snapshot skipped:", e instanceof Error ? e.message : e);
     });
   }
@@ -89,12 +95,13 @@ export const GET = handle(async (req: Request) => {
 
   return Response.json({
     symbol,
-    price,
+    price: providerPrice,
     nextEarnings,
-    source: fetched.map((r) => r.source).join("+"),
+    source: [...new Set(fetched.map((r) => r.source))].join("+"),
     fetchedAt,
     stale,
-    fallbackReasons: fetched.map((r) => r.fallbackReason).filter(Boolean),
+    isDelayed,
+    fallbackReasons: [...new Set(fetched.map((r) => r.fallbackReason).filter((reason): reason is string => Boolean(reason)))],
     contracts,
   });
 });

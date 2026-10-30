@@ -21,11 +21,12 @@ async function captureSelectedContract(contractSymbol: string) {
   if (!selected || !chain.fetchedAt) return;
   await recordOptionQuoteSnapshots({
     ticker: occ.underlying,
-    underlyingPrice: spot,
+    underlyingPrice: chain.underlyingPrice ?? spot,
     contracts: [selected],
     fetchedAt: chain.fetchedAt,
     stale: chain.stale,
     marketState: quote?.marketState,
+    isDelayed: chain.isDelayed,
   });
 }
 

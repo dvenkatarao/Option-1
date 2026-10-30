@@ -12,7 +12,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * credentials are throttled per client IP; the process-local counter is not shared across replicas.
  */
 
-const PUBLIC_PATHS = new Set(["/api/health"]);
+// The Schwab redirect is public only so the provider can return the browser; its route validates a signed, one-time state cookie before exchanging a code.
+const PUBLIC_PATHS = new Set(["/api/health", "/api/v1/auth/callback"]);
 const AUTH_FAILURE_LIMIT = 5;
 const AUTH_FAILURE_WINDOW_MS = 15 * 60 * 1000;
 const MAX_TRACKED_AUTH_CLIENTS = 10_000;

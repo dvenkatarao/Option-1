@@ -12,6 +12,7 @@ describe("option quote snapshot capture policy", () => {
     expect(snapshotSkipReason(regularSessionQuote, true, new Date("2026-10-21T14:05:00.000Z"))).toBe("stale provider response");
     expect(snapshotSkipReason(regularSessionQuote, false, new Date("2026-10-21T14:05:00.000Z"), "CLOSED")).toBe("underlying market state is CLOSED");
     expect(snapshotSkipReason(regularSessionQuote, false, new Date("2026-10-21T14:05:00.000Z"), "REGULAR")).toBeNull();
+    expect(snapshotSkipReason(regularSessionQuote, false, new Date("2026-10-21T14:05:00.000Z"), "REGULAR", true)).toBe("provider flagged delayed quotes");
   });
 
   it("skips quotes outside the regular US session", () => {
