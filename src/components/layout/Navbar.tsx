@@ -125,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-current={activeTab === id ? 'page' : undefined}
               className={`inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 sm:px-3.5 ${
                 activeTab === id
-                  ? 'bg-emerald-600 font-semibold text-white shadow-md shadow-emerald-600/30'
+                  ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
               }`}
             >

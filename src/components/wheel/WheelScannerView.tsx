@@ -128,7 +128,7 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
             onClick={() => setSelectedSector(sec)}
             className={`px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap font-medium transition-all ${
               selectedSector === sec
-                ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400/50'
                 : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
             }`}
           >

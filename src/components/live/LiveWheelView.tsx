@@ -202,7 +202,7 @@ export function LiveWheelView({
             <Activity className="h-6 w-6 shrink-0 text-emerald-400" />
             <h1 className="text-2xl font-extrabold text-white">Live Provider Scanner &amp; Journal</h1>
           </div>
-          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">The scanner filters real option-chain quotes against delta, liquidity, spread, earnings and return rules. Refresh stock fundamentals and scan option chains in small batches; saved entries are separate from candidate ideas.</p>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400 sm:text-sm">The scanner filters real option-chain quotes against delta, liquidity, spread, earnings and return rules. Refresh stock fundamentals and scan option chains in small batches; saved entries are separate from candidate ideas.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => void load()} disabled={loading || action !== null} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button>

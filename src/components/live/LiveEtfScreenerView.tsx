@@ -257,7 +257,7 @@ export function LiveEtfScreenerView() {
               {loading ? "Loading funds…" : data ? `${filteredRows.length} Funds Found` : "Count unavailable"}
             </span>
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-400"><span className="font-semibold text-emerald-300">Provider-backed ETF universe.</span> Research dividends, ex-dates, expense drag, NAV erosion risks, underlying holdings, and long-term total return.</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400 sm:text-sm"><span className="font-semibold text-emerald-300">Provider-backed ETF universe.</span> Research dividends, ex-dates, expense drag, NAV erosion risks, underlying holdings, and long-term total return.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => void load()} disabled={loading || refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/50 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button>
@@ -285,8 +285,8 @@ export function LiveEtfScreenerView() {
       {error && <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}. For persistent data, configure PostgreSQL with DATABASE_URL and run <code className="rounded bg-slate-950 px-1 py-0.5">npm run db:migrate</code> (or use Docker Compose).</span></div>}
 
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" aria-label="ETF provider categories">
-        <button onClick={() => setCategoryFilter("ALL")} className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-medium transition ${categoryFilter === "ALL" ? "bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30" : "border border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}>All Funds</button>
-        {(data?.categories ?? []).map((category) => <button key={category} onClick={() => setCategoryFilter(category)} className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-medium transition ${categoryFilter === category ? "bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30" : "border border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}>{category}</button>)}
+        <button onClick={() => setCategoryFilter("ALL")} className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-medium transition ${categoryFilter === "ALL" ? "bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30" : "border border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}>All Funds</button>
+        {(data?.categories ?? []).map((category) => <button key={category} onClick={() => setCategoryFilter(category)} className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-medium transition ${categoryFilter === category ? "bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30" : "border border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}>{category}</button>)}
       </div>
 
       <section className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/90 p-4">

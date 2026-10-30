@@ -291,9 +291,9 @@ export function App() {
               {SAMPLE_ETF_SCREENS_ENABLED && (
                 <button
                   onClick={() => { setShowLiveEtfScreener(false); setIsCompareViewOpen(false); }}
-                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-medium transition ${
                     !showLiveEtfScreener && !isCompareViewOpen
-                      ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                      ? 'bg-emerald-600 text-slate-950 font-semibold shadow-md shadow-emerald-600/30'
                       : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -303,9 +303,9 @@ export function App() {
 
               <button
                 onClick={() => { setShowLiveEtfScreener(true); setIsCompareViewOpen(false); }}
-                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-medium transition ${
                   showLiveEtfScreener && !isCompareViewOpen
-                    ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                    ? 'bg-emerald-600 text-slate-950 font-semibold shadow-md shadow-emerald-600/30'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -315,9 +315,9 @@ export function App() {
               {SAMPLE_ETF_SCREENS_ENABLED && (
                 <button
                   onClick={() => setIsCompareViewOpen(true)}
-                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
                     isCompareViewOpen
-                      ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                      ? 'bg-emerald-600 text-slate-950 font-semibold shadow-md shadow-emerald-600/30'
                       : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -356,20 +356,20 @@ export function App() {
             <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
               <button
                 onClick={() => setWheelSubTab('live')}
-                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${wheelSubTab === 'live' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition ${wheelSubTab === 'live' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
               >
                 1. Live Provider Scanner &amp; Journal
               </button>
               <button
                 onClick={() => setWheelSubTab('simulator')}
-                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5 ${wheelSubTab === 'simulator' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition flex items-center gap-1.5 ${wheelSubTab === 'simulator' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
               >
                 <Zap className="h-3.5 w-3.5" />
                 <span>2. Interactive Wheel Cycle Simulator</span>
               </button>
               <button
                 onClick={() => setWheelSubTab('tracker')}
-                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5 ${wheelSubTab === 'tracker' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition flex items-center gap-1.5 ${wheelSubTab === 'tracker' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
               >
                 <span>3. Active Positions &amp; Roll Journal</span>
                 <span className="rounded bg-slate-950 px-1.5 py-0.5 font-mono text-[10px] text-slate-200">{activeCampaigns.length}</span>
@@ -377,7 +377,7 @@ export function App() {
               {SAMPLE_WHEEL_SCREENS_ENABLED && (
                 <button
                   onClick={() => setWheelSubTab('scanner')}
-                  className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${wheelSubTab === 'scanner' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+                  className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition ${wheelSubTab === 'scanner' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
                 >
                   4. Wheel Opportunity Scanner
                 </button>
@@ -426,8 +426,8 @@ export function App() {
         {activeTab === 'portfolio' && (
           <div className="space-y-5">
             <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
-              <button onClick={() => setPortfolioView('studio')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${portfolioView === 'studio' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Portfolio Studio · Simulator</button>
-              <button onClick={() => setPortfolioView('accounts')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${portfolioView === 'accounts' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Persistent Accounts & Ledger</button>
+              <button onClick={() => setPortfolioView('studio')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition ${portfolioView === 'studio' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Portfolio Studio · Simulator</button>
+              <button onClick={() => setPortfolioView('accounts')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition ${portfolioView === 'accounts' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Persistent Accounts & Ledger</button>
             </div>
             {portfolioView === 'studio' ? (
               <PortfolioStudioView
@@ -444,8 +444,8 @@ export function App() {
         {activeTab === 'research' && (
           <div className="space-y-5">
             <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
-              <button onClick={() => setResearchView('academy')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${researchView === 'academy' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Research Academy · Learning</button>
-              <button onClick={() => setResearchView('live')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${researchView === 'live' ? 'bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Live Research & Sources</button>
+              <button onClick={() => setResearchView('academy')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition ${researchView === 'academy' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Research Academy · Learning</button>
+              <button onClick={() => setResearchView('live')} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-medium transition ${researchView === 'live' ? 'bg-emerald-600 font-semibold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}>Live Research & Sources</button>
             </div>
             {researchView === 'academy' ? (
               <ResearchAcademyView
