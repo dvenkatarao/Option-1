@@ -74,3 +74,7 @@ npm audit --audit-level=high
 ```
 
 CI audits production dependencies for moderate-or-higher advisories and the full dependency tree for high/critical advisories. If the Drizzle schema changes, generate and commit a migration with `npm run db:generate`. Keep credentials in server-side environment variables; never commit `.env`. See [SECURITY.md](SECURITY.md) for vulnerability reporting and the current access/data-isolation limitations.
+
+## License
+
+This project is licensed under the GNU General Public License, version 3 or (at your option) any later version. See [LICENSE](LICENSE).
