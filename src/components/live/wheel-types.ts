@@ -13,8 +13,14 @@ export type LiveWheelRow = {
   ctx: {
     price: number;
     nextEarnings: string | null;
+    earningsEstimated: boolean;
+    exDividend: string | null;
+    dividendPerShare: number | null;
     dividendYield: number | null;
     beta: number | null;
+    hv30: number | null;
+    sma200: number | null;
+    supports: number[];
   };
   best: {
     contract: {

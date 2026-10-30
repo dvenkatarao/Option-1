@@ -77,7 +77,7 @@ export const WheelTrackerView: React.FC<WheelTrackerViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <RotateCw className="w-6 h-6 text-emerald-400" />
-            <h1 className="text-2xl font-extrabold text-white">Session Wheel Demo Tracker</h1>
+            <h1 className="text-2xl font-extrabold text-white">Active Positions &amp; Roll Journal</h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Review seeded examples and session-only entries; calculations are not a live broker journal or AI trade instruction.

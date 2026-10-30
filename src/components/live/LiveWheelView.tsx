@@ -24,9 +24,13 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function LiveWheelView({
   initialDetailTicker = null,
   onInitialDetailTickerOpened,
+  onResultsChange,
+  onResultsLoadingChange,
 }: {
   initialDetailTicker?: string | null;
   onInitialDetailTickerOpened?: () => void;
+  onResultsChange?: (results: LiveWheelResults | null) => void;
+  onResultsLoadingChange?: (loading: boolean) => void;
 }) {
   const [results, setResults] = useState<LiveWheelResults | null>(null);
   const [positions, setPositions] = useState<WheelPosition[]>([]);
@@ -46,6 +50,7 @@ export function LiveWheelView({
   const [entry, setEntry] = useState({ ticker: "", side: "put_sold", strike: "", expiration: "", premium: "", quantity: "1", costBasis: "", openedAt: new Date().toISOString().slice(0, 10), notes: "" });
   const journalFormRef = useRef<HTMLFormElement>(null);
   const chainRequestIdRef = useRef(0);
+  const loadRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (!initialDetailTicker) return;
@@ -57,16 +62,32 @@ export function LiveWheelView({
   }, [initialDetailTicker, onInitialDetailTickerOpened]);
 
   const load = useCallback(async () => {
+    const requestId = loadRequestIdRef.current + 1;
+    loadRequestIdRef.current = requestId;
     setLoading(true); setError(null);
+    onResultsChange?.(null);
+    onResultsLoadingChange?.(true);
     const resultsUrl = `/api/wheel/results${filterQuery ? `?${filterQuery}` : ""}`;
     const [scanResult, positionResult] = await Promise.allSettled([requestJson<LiveWheelResults>(resultsUrl), requestJson<{ positions: WheelPosition[] }>("/api/wheel/positions")]);
-    if (scanResult.status === "fulfilled") setResults(scanResult.value);
+    if (loadRequestIdRef.current !== requestId) return;
+    if (scanResult.status === "fulfilled") {
+      setResults(scanResult.value);
+      onResultsChange?.(scanResult.value);
+    }
     if (positionResult.status === "fulfilled") setPositions(positionResult.value.positions ?? []);
     const failures = [scanResult, positionResult].filter((item) => item.status === "rejected") as PromiseRejectedResult[];
     if (failures.length) setError(failures.map((item) => item.reason instanceof Error ? item.reason.message : "Request failed").join("; "));
     setLoading(false);
-  }, [filterQuery]);
-  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+    onResultsLoadingChange?.(false);
+  }, [filterQuery, onResultsChange, onResultsLoadingChange]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      loadRequestIdRef.current += 1;
+      onResultsLoadingChange?.(false);
+    };
+  }, [load, onResultsLoadingChange]);
 
   const applyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -175,7 +196,7 @@ export function LiveWheelView({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/25 p-5 shadow-xl"><div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center"><div><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300"><Activity className="h-4 w-4" /> Provider-backed options desk</div><h2 className="mt-2 text-2xl font-extrabold text-white">Options Wheel Scanner &amp; Journal</h2><p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">The scanner filters real option-chain quotes against delta, liquidity, spread, earnings and return rules. Refresh stock fundamentals and scan option chains in small batches; saved entries are separate from candidate ideas.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => void load()} disabled={loading || action !== null} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button><button onClick={() => void runBatch("refresh")} disabled={action !== null} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white disabled:opacity-50"><Database className={`h-3.5 w-3.5 ${action === "refresh" ? "animate-pulse" : ""}`} />{action === "refresh" ? "Refreshing…" : "Hydrate 8 stocks"}</button><button onClick={() => void runBatch("scan")} disabled={action !== null} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${action === "scan" ? "animate-spin" : ""}`} />{action === "scan" ? "Scanning…" : "Scan 8 chains"}</button></div></div>
+      <section className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/25 p-5 shadow-xl"><div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center"><div><div className="flex items-center gap-2"><Activity className="h-6 w-6 shrink-0 text-emerald-400" /><h1 className="text-2xl font-extrabold text-white">Live Provider Scanner &amp; Journal</h1></div><p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">The scanner filters real option-chain quotes against delta, liquidity, spread, earnings and return rules. Refresh stock fundamentals and scan option chains in small batches; saved entries are separate from candidate ideas.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => void load()} disabled={loading || action !== null} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button><button onClick={() => void runBatch("refresh")} disabled={action !== null} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white disabled:opacity-50"><Database className={`h-3.5 w-3.5 ${action === "refresh" ? "animate-pulse" : ""}`} />{action === "refresh" ? "Refreshing…" : "Hydrate 8 stocks"}</button><button onClick={() => void runBatch("scan")} disabled={action !== null} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${action === "scan" ? "animate-spin" : ""}`} />{action === "scan" ? "Scanning…" : "Scan 8 chains"}</button></div></div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[{ label: "Universe stocks", value: results ? `${results.info.universe}` : "—" }, { label: "Stocks with chain scans", value: results ? `${results.info.scanned}` : "—" }, { label: "Waiting on data", value: results ? `${results.info.waiting}` : "—" }, { label: "Qualified put candidates", value: results ? `${results.rows.length}` : "—" }].map((item) => <div key={item.label} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{item.label}</div><div className="mt-1 font-mono text-lg font-bold text-slate-100">{item.value}</div></div>)}</div>
       </section>
       {error && <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs leading-relaxed text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}. These services require PostgreSQL with the included schema; provider responses can be delayed, rate-limited or unavailable.</div>}
