@@ -33,6 +33,8 @@ import { DEFAULT_PARAMS, scanCalls, scanPuts, type OptionContract, type StockCtx
 const inputClass = "w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500/60";
 const cash = (value: number | null | undefined, digits = 2) => value == null || !Number.isFinite(value) ? "N/A" : `$${value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 const pct = (value: number | null | undefined, digits = 1) => value == null || !Number.isFinite(value) ? "N/A" : `${(value * 100).toFixed(digits)}%`;
+// Yahoo regularMarketChangePercent is already in percentage points, unlike fractional ratios formatted by pct().
+const percentPoints = (value: number | null | undefined, digits = 2) => value == null || !Number.isFinite(value) ? "N/A" : `${value.toFixed(digits)}%`;
 const multiple = (value: number | null | undefined, digits = 2) => value == null || !Number.isFinite(value) ? "N/A" : `${value.toFixed(digits)}x`;
 const stamp = (value: string | null | undefined) => value ? new Date(value).toLocaleString() : "Not available";
 
@@ -315,7 +317,7 @@ export function LiveWheelDetailView({ ticker, onClose, onUseContract }: { ticker
         {tab === "Overview" && stock && <div className="space-y-5">
           <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             <Metric label="Underlying" value={cash(quotePrice)} hint={detail?.quote?.marketState ?? "Delayed quote / stored close fallback"} />
-            <Metric label="Day change" value={pct(detail?.quote?.changePct)} tone={detail?.quote?.changePct != null && detail.quote.changePct < 0 ? "text-rose-300" : "text-emerald-300"} />
+            <Metric label="Day change" value={percentPoints(detail?.quote?.changePct)} tone={detail?.quote?.changePct != null && detail.quote.changePct < 0 ? "text-rose-300" : "text-emerald-300"} />
             <Metric label="Stock grade" value={stock.grade ?? "N/A"} hint={`Score ${stock.quality?.score?.toFixed(1) ?? "—"} · coverage ${pct(stock.quality?.coverage ?? null)}`} />
             <Metric label="Market cap" value={cash(stock.marketCap, 0)} />
             <Metric label="Beta" value={stock.fundamentals?.beta?.toFixed(2) ?? "N/A"} />
