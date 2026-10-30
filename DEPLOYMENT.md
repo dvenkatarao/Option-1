@@ -5,7 +5,7 @@ WheelCore keeps the existing dashboard, screener, simulator, and research academ
 | Variable | Notes |
 |---|---|
 | `DATABASE_URL` | Postgres URL. Set `DATABASE_SSL=true` if the provider requires TLS. |
-| `APP_USERNAME` / `APP_PASSWORD` | Login for the whole app. Password ≥ 12 chars. |
+| `APP_USERNAME` / `APP_PASSWORD` | One shared HTTP Basic login for single-owner use. Password ≥ 12 chars. Every holder can access all portfolios and transactions; per-user accounts and ownership checks are not implemented. |
 | `PORTFOLIO_ENCRYPTION_KEY` | ≥ 32 random chars (`openssl rand -base64 48`). Changing it makes previously encrypted values unreadable. |
 | `QUOTE_SNAPSHOTS` | Optional. `false` turns off the in-process bid/ask sampler (needs the server running during US market hours; uses the `quote_snapshots` table, created by migration `0001`). |
 | `SEC_USER_AGENT` | `AppName you@domain.com` (SEC EDGAR requirement). |
@@ -17,6 +17,10 @@ WheelCore keeps the existing dashboard, screener, simulator, and research academ
 | `WHEEL_EXTRA_SYMBOLS`, `RISK_FREE_RATE` | Optional: extra tickers for the ~330-stock universe; override the risk-free rate used to model deltas. |
 
 Health probe: `GET /api/health` (public, returns `{ok:true}` when the DB answers).
+
+## Authentication and rate limiting
+
+The application currently has one shared Basic credential and a global portfolio dataset; it does not isolate portfolios by user. Use it only for a single trusted owner, not unrelated users or separate customer accounts. The Next.js access proxy throttles five failed Basic-credential attempts per client IP over a 15-minute window and returns `429` with `Retry-After`. Counters are in process memory: they reset on restart and are not shared across replicas. Put internet-facing deployments behind HTTPS and a trusted ingress/WAF that also rate-limits authentication attempts; configure that ingress to overwrite `X-Forwarded-For` so clients cannot choose their own rate-limit key. Add a shared edge limit before scaling to multiple instances.
 
 ## Option A – Render (test environment in ~5 minutes)
 
@@ -31,11 +35,11 @@ Health probe: `GET /api/health` (public, returns `{ok:true}` when the DB answers
 cp .env.example .env     # set APP_PASSWORD, PORTFOLIO_ENCRYPTION_KEY, POSTGRES_PASSWORD, SEC_USER_AGENT
 docker compose up --build -d
 ```
-Put it behind HTTPS (Caddy, nginx, a cloud load balancer). Basic auth over plain HTTP exposes the password.
+Put it behind HTTPS (Caddy, nginx, a cloud load balancer). Basic auth over plain HTTP exposes the password. Configure the trusted proxy to overwrite the forwarded client-IP header and apply an ingress/WAF authentication rate limit; the built-in limit is process-local.
 
 ## Option C – Fly.io / Railway / AWS
 
-Build from the `Dockerfile`, attach Postgres, set the variables above, health check `/api/health`. Run a single instance, or several (migrations take an advisory lock so concurrent starts are safe).
+Build from the `Dockerfile`, attach Postgres, set the variables above, and health check `/api/health`. Run one instance unless your ingress/WAF provides a shared authentication rate limit; the app's in-process lockout counters are not synchronized across replicas. Migrations take an advisory lock, so concurrent starts are safe.
 
 ## Operations
 
