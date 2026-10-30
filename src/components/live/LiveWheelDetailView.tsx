@@ -108,17 +108,7 @@ type OptionFilter = "all" | "put" | "call";
 type SortMode = "return" | "delta" | "openInterest";
 
 function Metric({ label, value, hint, tone = "text-slate-100", compact = false }: { label: string; value: string; hint?: string; tone?: string; compact?: boolean }) {
-  return <div className={`rounded-xl border border-slate-800 bg-slate-950/80 ${compact ? "p-2.5" : "p-3"}`}><div className={`${compact ? "text-[10px]" : "text-[11px]"} font-semibold uppercase tracking-wider text-slate-400`}>{label}</div><div className={`mt-1 font-mono ${compact ? "text-[13px]" : "text-sm"} font-bold ${tone}`}>{value}</div>{hint && <div className={`mt-1 ${compact ? "text-[10px]" : "text-[11px]"} leading-relaxed text-slate-400`}>{hint}</div>}</div>;
-}
-
-function CompactMetric({ label, value, hint, tone = "text-slate-100" }: { label: string; value: string; hint?: string; tone?: string }) {
-  return (
-    <div className="min-w-0 rounded-lg border border-slate-800/80 bg-slate-950/50 p-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
-      <div className={`mt-0.5 break-words font-mono text-xs font-bold tabular-nums ${tone}`}>{value}</div>
-      {hint && <div className="mt-0.5 text-[10px] leading-snug text-slate-400">{hint}</div>}
-    </div>
-  );
+  return <div className={`rounded-xl border border-slate-800 bg-slate-950/80 ${compact ? "min-h-[80px] p-2.5" : "p-3"}`}><div className={`${compact ? "text-[10px]" : "text-[11px]"} font-semibold uppercase tracking-wider text-slate-400`}>{label}</div><div className={`mt-1 font-mono ${compact ? "text-[13px]" : "text-sm"} font-bold ${tone}`}>{value}</div>{hint && <div className={`mt-1 ${compact ? "text-[10px]" : "text-[11px]"} leading-relaxed text-slate-400`}>{hint}</div>}</div>;
 }
 
 function seriesWithAverages(bars: PriceBar[]) {
@@ -336,18 +326,18 @@ export function LiveWheelDetailView({ ticker, onClose, onUseContract }: { ticker
             <Metric compact label="Next earnings" value={stock.events?.nextEarnings ?? "Unknown"} hint={stock.events?.earningsEstimated ? "Provider date window; estimated" : undefined} />
           </section>
           <section aria-label="Additional fundamentals" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-            <CompactMetric label="Forward P/E" value={multiple(stock.fundamentals?.forwardPE)} />
-            <CompactMetric label="Trailing P/E" value={multiple(stock.fundamentals?.trailingPE)} />
-            <CompactMetric label="Operating margin" value={pct(stock.fundamentals?.operatingMargin)} />
-            <CompactMetric label="Profit margin" value={pct(stock.fundamentals?.profitMargin)} />
-            <CompactMetric label="Return on equity" value={pct(stock.fundamentals?.roe)} />
-            <CompactMetric label="Free cash flow" value={cash(stock.fundamentals?.freeCashflow, 0)} />
-            <CompactMetric label="FCF yield" value={stock.fundamentals?.freeCashflow != null && stock.marketCap ? pct(stock.fundamentals.freeCashflow / stock.marketCap) : "N/A"} />
-            <CompactMetric label="Debt / equity" value={multiple(stock.fundamentals?.debtToEquity)} />
-            <CompactMetric label="Current ratio" value={multiple(stock.fundamentals?.currentRatio)} />
-            <CompactMetric label="Analyst view" value={stock.fundamentals?.recMean?.toFixed(2) ?? "N/A"} hint={`${stock.fundamentals?.analystCount ?? "N/A"} analysts · 1=strong buy, 5=sell`} />
-            <CompactMetric label="Mean target" value={cash(stock.fundamentals?.targetMean)} hint={stock.fundamentals?.targetMean != null && quotePrice ? `${pct(stock.fundamentals.targetMean / quotePrice - 1)} vs current price` : undefined} />
-            <CompactMetric label="Revenue" value={cash(stock.fundamentals?.totalRevenue, 0)} />
+            <Metric compact label="Forward P/E" value={multiple(stock.fundamentals?.forwardPE)} />
+            <Metric compact label="Trailing P/E" value={multiple(stock.fundamentals?.trailingPE)} />
+            <Metric compact label="Operating margin" value={pct(stock.fundamentals?.operatingMargin)} />
+            <Metric compact label="Profit margin" value={pct(stock.fundamentals?.profitMargin)} />
+            <Metric compact label="Return on equity" value={pct(stock.fundamentals?.roe)} />
+            <Metric compact label="Free cash flow" value={cash(stock.fundamentals?.freeCashflow, 0)} />
+            <Metric compact label="FCF yield" value={stock.fundamentals?.freeCashflow != null && stock.marketCap ? pct(stock.fundamentals.freeCashflow / stock.marketCap) : "N/A"} />
+            <Metric compact label="Debt / equity" value={multiple(stock.fundamentals?.debtToEquity)} />
+            <Metric compact label="Current ratio" value={multiple(stock.fundamentals?.currentRatio)} />
+            <Metric compact label="Analyst view" value={stock.fundamentals?.recMean?.toFixed(2) ?? "N/A"} hint={`${stock.fundamentals?.analystCount ?? "N/A"} analysts · 1=strong buy, 5=sell`} />
+            <Metric compact label="Mean target" value={cash(stock.fundamentals?.targetMean)} hint={stock.fundamentals?.targetMean != null && quotePrice ? `${pct(stock.fundamentals.targetMean / quotePrice - 1)} vs current price` : undefined} />
+            <Metric compact label="Revenue" value={cash(stock.fundamentals?.totalRevenue, 0)} />
           </section>
           <UnderlyingChart bars={detail?.history ?? []} price={quotePrice} technicals={stock.technicals} compact={!overviewChartExpanded} onToggleCompact={() => setOverviewChartExpanded((expanded) => !expanded)} />
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
