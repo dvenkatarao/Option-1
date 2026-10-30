@@ -107,8 +107,18 @@ type DetailTab = "Overview" | "Technicals" | "Options" | "Wheel plan";
 type OptionFilter = "all" | "put" | "call";
 type SortMode = "return" | "delta" | "openInterest";
 
-function Metric({ label, value, hint, tone = "text-slate-100" }: { label: string; value: string; hint?: string; tone?: string }) {
-  return <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3"><div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</div><div className={`mt-1 font-mono text-sm font-bold ${tone}`}>{value}</div>{hint && <div className="mt-1 text-[11px] leading-relaxed text-slate-400">{hint}</div>}</div>;
+function Metric({ label, value, hint, tone = "text-slate-100", compact = false }: { label: string; value: string; hint?: string; tone?: string; compact?: boolean }) {
+  return <div className={`rounded-xl border border-slate-800 bg-slate-950/80 ${compact ? "p-2.5" : "p-3"}`}><div className={`${compact ? "text-[10px]" : "text-[11px]"} font-semibold uppercase tracking-wider text-slate-400`}>{label}</div><div className={`mt-1 font-mono ${compact ? "text-[13px]" : "text-sm"} font-bold ${tone}`}>{value}</div>{hint && <div className={`mt-1 ${compact ? "text-[10px]" : "text-[11px]"} leading-relaxed text-slate-400`}>{hint}</div>}</div>;
+}
+
+function CompactMetric({ label, value, hint, tone = "text-slate-100" }: { label: string; value: string; hint?: string; tone?: string }) {
+  return (
+    <div className="min-w-0 border-b border-slate-800/80 pb-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
+      <div className={`mt-0.5 break-words font-mono text-xs font-bold tabular-nums ${tone}`}>{value}</div>
+      {hint && <div className="mt-0.5 text-[10px] leading-snug text-slate-400">{hint}</div>}
+    </div>
+  );
 }
 
 function seriesWithAverages(bars: PriceBar[]) {
@@ -120,12 +130,13 @@ function seriesWithAverages(bars: PriceBar[]) {
   });
 }
 
-function UnderlyingChart({ bars, price, technicals }: { bars: PriceBar[]; price: number | null; technicals: Technicals | null }) {
+function UnderlyingChart({ bars, price, technicals, compact = false, onToggleCompact }: { bars: PriceBar[]; price: number | null; technicals: Technicals | null; compact?: boolean; onToggleCompact?: () => void }) {
   const series = useMemo(() => seriesWithAverages(bars).slice(-252), [bars]);
-  if (series.length < 2) return <div className="grid h-64 place-items-center rounded-xl border border-dashed border-slate-800 text-xs text-slate-400">Daily price history is unavailable. Try refreshing the stock data.</div>;
+  const chartHeight = compact ? "h-48" : "h-64";
+  if (series.length < 2) return <div className={`grid ${chartHeight} place-items-center rounded-xl border border-dashed border-slate-800 text-xs text-slate-400`}>Daily price history is unavailable. Try refreshing the stock data.</div>;
   return <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-    <div className="mb-3 flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-xs font-bold text-white">Underlying · trailing 1 year</h3><p className="mt-1 text-[11px] text-slate-400">Daily close with calculated 50/200-day simple moving averages. Not an intraday chart.</p></div><div className="flex flex-wrap gap-3 text-[10px]"><span className="text-cyan-300">● Close</span><span className="text-amber-300">● SMA 50</span><span className="text-violet-300">● SMA 200</span></div></div>
-    <div className="h-64 w-full">
+    <div className="mb-3 flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-xs font-bold text-white">Underlying · trailing 1 year</h3><p className="mt-1 text-[11px] text-slate-400">Daily close with calculated 50/200-day simple moving averages. Not an intraday chart.</p></div><div className="flex flex-wrap items-center gap-3"><div className="flex flex-wrap gap-3 text-[10px]"><span className="text-cyan-300">● Close</span><span className="text-amber-300">● SMA 50</span><span className="text-violet-300">● SMA 200</span></div>{onToggleCompact && <button type="button" aria-expanded={!compact} onClick={onToggleCompact} className="rounded-md border border-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-900 hover:text-white">{compact ? "Expand chart" : "Compact chart"}</button>}</div></div>
+    <div className={`${chartHeight} w-full`}>
       <ResponsiveContainer width="100%" height="100%"><LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid stroke="#334155" strokeDasharray="4 5" />
         <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} minTickGap={38} tickFormatter={(value: string) => value.slice(5)} />
@@ -171,6 +182,7 @@ export function LiveWheelDetailView({ ticker, onClose, onUseContract }: { ticker
   const [loading, setLoading] = useState(true);
   const [chainLoading, setChainLoading] = useState(true);
   const [tab, setTab] = useState<DetailTab>("Overview");
+  const [overviewChartExpanded, setOverviewChartExpanded] = useState(false);
   const [optionFilter, setOptionFilter] = useState<OptionFilter>("all");
   const [expirationFilter, setExpirationFilter] = useState("all");
   const [sortMode, setSortMode] = useState<SortMode>("return");
@@ -304,7 +316,7 @@ export function LiveWheelDetailView({ ticker, onClose, onUseContract }: { ticker
     <div className="mx-auto min-h-[92vh] max-w-[1500px] rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
       <header className="sticky top-0 z-20 flex flex-col justify-between gap-3 rounded-t-2xl border-b border-slate-800 bg-slate-950/95 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:px-6">
         <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300"><Activity className="h-5 w-5" /></div><div><div className="flex flex-wrap items-center gap-2"><h2 className="font-mono text-xl font-extrabold text-white">{ticker}</h2>{stock?.grade && <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-300">{stock.grade} · {stock.quality?.score?.toFixed(0) ?? "—"}</span>}{detail?.quoteStale && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">stale quote</span>}</div><p className="mt-0.5 text-[11px] text-slate-400">{stock?.name ?? "Loading company profile…"} · {stock?.sector ?? "Sector unavailable"} · {detail?.quoteSource ?? "Yahoo Finance (unofficial; delayed)"}</p></div></div>
-        <div className="flex items-center gap-2"><div className="hidden text-right text-[11px] leading-relaxed text-slate-400 md:block"><div>Quote fetched {stamp(detail?.quoteFetchedAt)}</div><div>Daily bars: {detail?.historySource ?? "source unavailable"} · as of {stock?.priceBarAsOf ?? "—"} · fetched {stamp(detail?.historyFetchedAt)}{detail?.historyStale ? " · cached/stale" : ""}</div><div>Fundamentals refreshed {stamp(stock?.refreshedAt)}</div></div><button onClick={() => void load()} disabled={loading || chainLoading} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading || chainLoading ? "animate-spin" : ""}`} />Refresh</button><button onClick={onClose} aria-label="Close ticker details" className="rounded-lg border border-slate-700 p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><X className="h-4 w-4" /></button></div>
+        <div className="flex min-w-0 items-center gap-2"><div className="hidden min-w-0 flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right text-[10px] leading-snug text-slate-400 md:flex"><span>Quote fetched {stamp(detail?.quoteFetchedAt)}</span><span>Daily bars: {detail?.historySource ?? "source unavailable"} · as of {stock?.priceBarAsOf ?? "—"} · fetched {stamp(detail?.historyFetchedAt)}{detail?.historyStale ? " · cached/stale" : ""}</span><span>Fundamentals refreshed {stamp(stock?.refreshedAt)}</span></div><button onClick={() => void load()} disabled={loading || chainLoading} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading || chainLoading ? "animate-spin" : ""}`} />Refresh</button><button onClick={onClose} aria-label="Close ticker details" className="shrink-0 rounded-lg border border-slate-700 p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><X className="h-4 w-4" /></button></div>
       </header>
 
       <div className="border-b border-slate-800 px-4 sm:px-6"><nav className="flex gap-1 overflow-x-auto py-2">{(["Overview", "Technicals", "Options", "Wheel plan"] as DetailTab[]).map((item) => <button key={item} onClick={() => setTab(item)} className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition ${tab === item ? "bg-emerald-600 text-slate-950" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>{item}</button>)}</nav></div>
@@ -314,30 +326,32 @@ export function LiveWheelDetailView({ ticker, onClose, onUseContract }: { ticker
         {stock?.lastError && <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] leading-relaxed text-amber-100/80">Latest fundamentals refresh failed: {stock.lastError}. Stored fields are retained; review the source timestamp before relying on them.</div>}
         {!detail && loading ? <div className="grid min-h-80 place-items-center text-sm text-slate-400">Loading stored fundamentals, technicals, and daily bars…</div> : null}
 
-        {tab === "Overview" && stock && <div className="space-y-5">
+        {tab === "Overview" && stock && <div className="space-y-4">
           <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-            <Metric label="Underlying" value={cash(quotePrice)} hint={detail?.quote?.marketState ?? "Delayed quote / stored close fallback"} />
-            <Metric label="Day change" value={percentPoints(detail?.quote?.changePct)} tone={detail?.quote?.changePct != null && detail.quote.changePct < 0 ? "text-rose-300" : "text-emerald-300"} />
-            <Metric label="Stock grade" value={stock.grade ?? "N/A"} hint={`Score ${stock.quality?.score?.toFixed(1) ?? "—"} · coverage ${pct(stock.quality?.coverage ?? null)}`} />
-            <Metric label="Market cap" value={cash(stock.marketCap, 0)} />
-            <Metric label="Beta" value={stock.fundamentals?.beta?.toFixed(2) ?? "N/A"} />
-            <Metric label="Next earnings" value={stock.events?.nextEarnings ?? "Unknown"} hint={stock.events?.earningsEstimated ? "Provider date window; estimated" : undefined} />
+            <Metric compact label="Underlying" value={cash(quotePrice)} hint={detail?.quote?.marketState ?? "Delayed quote / stored close fallback"} />
+            <Metric compact label="Day change" value={percentPoints(detail?.quote?.changePct)} tone={detail?.quote?.changePct != null && detail.quote.changePct < 0 ? "text-rose-300" : "text-emerald-300"} />
+            <Metric compact label="Stock grade" value={stock.grade ?? "N/A"} hint={`Score ${stock.quality?.score?.toFixed(1) ?? "—"} · coverage ${pct(stock.quality?.coverage ?? null)}`} />
+            <Metric compact label="Market cap" value={cash(stock.marketCap, 0)} />
+            <Metric compact label="Beta" value={stock.fundamentals?.beta?.toFixed(2) ?? "N/A"} />
+            <Metric compact label="Next earnings" value={stock.events?.nextEarnings ?? "Unknown"} hint={stock.events?.earningsEstimated ? "Provider date window; estimated" : undefined} />
           </section>
-          <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-            <Metric label="Forward P/E" value={multiple(stock.fundamentals?.forwardPE)} />
-            <Metric label="Trailing P/E" value={multiple(stock.fundamentals?.trailingPE)} />
-            <Metric label="Operating margin" value={pct(stock.fundamentals?.operatingMargin)} />
-            <Metric label="Profit margin" value={pct(stock.fundamentals?.profitMargin)} />
-            <Metric label="Return on equity" value={pct(stock.fundamentals?.roe)} />
-            <Metric label="Free cash flow" value={cash(stock.fundamentals?.freeCashflow, 0)} />
-            <Metric label="FCF yield" value={stock.fundamentals?.freeCashflow != null && stock.marketCap ? pct(stock.fundamentals.freeCashflow / stock.marketCap) : "N/A"} />
-            <Metric label="Debt / equity" value={multiple(stock.fundamentals?.debtToEquity)} />
-            <Metric label="Current ratio" value={multiple(stock.fundamentals?.currentRatio)} />
-            <Metric label="Analyst view" value={stock.fundamentals?.recMean?.toFixed(2) ?? "N/A"} hint={`${stock.fundamentals?.analystCount ?? "N/A"} analysts · 1=strong buy, 5=sell`} />
-            <Metric label="Mean target" value={cash(stock.fundamentals?.targetMean)} hint={stock.fundamentals?.targetMean != null && quotePrice ? `${pct(stock.fundamentals.targetMean / quotePrice - 1)} vs current price` : undefined} />
-            <Metric label="Revenue" value={cash(stock.fundamentals?.totalRevenue, 0)} />
+          <section aria-label="Additional fundamentals" className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 sm:p-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 xl:grid-cols-6">
+              <CompactMetric label="Forward P/E" value={multiple(stock.fundamentals?.forwardPE)} />
+              <CompactMetric label="Trailing P/E" value={multiple(stock.fundamentals?.trailingPE)} />
+              <CompactMetric label="Operating margin" value={pct(stock.fundamentals?.operatingMargin)} />
+              <CompactMetric label="Profit margin" value={pct(stock.fundamentals?.profitMargin)} />
+              <CompactMetric label="Return on equity" value={pct(stock.fundamentals?.roe)} />
+              <CompactMetric label="Free cash flow" value={cash(stock.fundamentals?.freeCashflow, 0)} />
+              <CompactMetric label="FCF yield" value={stock.fundamentals?.freeCashflow != null && stock.marketCap ? pct(stock.fundamentals.freeCashflow / stock.marketCap) : "N/A"} />
+              <CompactMetric label="Debt / equity" value={multiple(stock.fundamentals?.debtToEquity)} />
+              <CompactMetric label="Current ratio" value={multiple(stock.fundamentals?.currentRatio)} />
+              <CompactMetric label="Analyst view" value={stock.fundamentals?.recMean?.toFixed(2) ?? "N/A"} hint={`${stock.fundamentals?.analystCount ?? "N/A"} analysts · 1=strong buy, 5=sell`} />
+              <CompactMetric label="Mean target" value={cash(stock.fundamentals?.targetMean)} hint={stock.fundamentals?.targetMean != null && quotePrice ? `${pct(stock.fundamentals.targetMean / quotePrice - 1)} vs current price` : undefined} />
+              <CompactMetric label="Revenue" value={cash(stock.fundamentals?.totalRevenue, 0)} />
+            </div>
           </section>
-          <UnderlyingChart bars={detail?.history ?? []} price={quotePrice} technicals={stock.technicals} />
+          <UnderlyingChart bars={detail?.history ?? []} price={quotePrice} technicals={stock.technicals} compact={!overviewChartExpanded} onToggleCompact={() => setOverviewChartExpanded((expanded) => !expanded)} />
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4"><div className="flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-emerald-300" /><h3 className="text-xs font-bold text-white">Stock quality pillars · WheelCore heuristic</h3></div><p className="mt-1 text-[11px] leading-relaxed text-slate-400">This is a deterministic research score computed from stored Yahoo fundamentals; it is not a provider rating or a forecast.</p><div className="mt-4 space-y-3">{stock.quality?.pillars.map((pillar) => <div key={pillar.key}><div className="mb-1 flex items-center justify-between gap-2"><span className="text-[11px] font-semibold text-slate-300">{pillar.label} <span className="text-slate-400">· {(pillar.weight * 100).toFixed(0)}%</span></span><span className="font-mono text-[10px] text-emerald-300">{pillar.score?.toFixed(0) ?? "N/A"}{pillar.letter ? ` · ${pillar.letter}` : ""}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(0, Math.min(100, pillar.score ?? 0))}%` }} /></div><p className="mt-1 text-[11px] leading-relaxed text-slate-400">{pillar.detail}</p></div>) ?? <p className="text-xs text-slate-500">Quality score unavailable until fundamentals are hydrated.</p>}</div>{stock.quality?.caps.length ? <div className="mt-3 rounded-lg border border-amber-500/15 bg-amber-500/5 p-3 text-[11px] text-amber-200">Grade caps: {stock.quality.caps.join(" · ")}</div> : null}</div>
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4"><div className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-cyan-300" /><h3 className="text-xs font-bold text-white">Upcoming events & distributions</h3></div><div className="mt-3 space-y-3 text-[11px]"><div className="flex justify-between gap-3"><span className="text-slate-400">Earnings</span><span className="text-right text-slate-200">{stock.events?.nextEarnings ?? "Not reported"}{stock.events?.earningsEstimated ? " · estimated" : ""}</span></div><div className="flex justify-between gap-3"><span className="text-slate-400">Ex-dividend</span><span className="text-slate-200">{stock.events?.exDividend ?? "Not reported"}</span></div><div className="flex justify-between gap-3"><span className="text-slate-400">Dividend / share</span><span className="font-mono text-slate-200">{cash(stock.events?.dividendPerShare)}</span></div><div className="flex justify-between gap-3"><span className="text-slate-400">Dividend yield</span><span className="font-mono text-slate-200">{pct(stock.events?.dividendYield)}</span></div></div><div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/70 p-3 text-[11px] leading-relaxed text-slate-400">Unknown provider dates remain unknown. Earnings and ex-dividend dates can change; verify against the issuer before trading.</div></div>

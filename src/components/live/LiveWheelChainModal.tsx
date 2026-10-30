@@ -29,9 +29,9 @@ const daysToExpiration = (expiration: string) => Math.max(0, Math.round((Date.pa
 
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/70 px-2.5 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-      <div className="mt-1 break-words font-mono text-xs font-semibold text-slate-200">{value}</div>
+    <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/70 px-2 py-1.5">
+      <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="mt-0.5 break-words font-mono text-[11px] font-semibold tabular-nums text-slate-200">{value}</div>
     </div>
   );
 }
@@ -61,7 +61,7 @@ export function LiveWheelChainModal({
 
   const selectContract = (contract: OptionContract) => {
     setSelectedSymbol(contract.symbol);
-    // On narrow screens the detail panel stacks below the contract cards; bring it into view on selection.
+    // On narrow screens the detail panel stacks below the contract list; bring it into view on selection.
     if (window.innerWidth < 1280) {
       window.setTimeout(() => selectedDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 40);
     }
@@ -102,7 +102,7 @@ export function LiveWheelChainModal({
         aria-label={`${ticker} live option chain`}
         className="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-slate-800 bg-slate-950 px-4 py-4 sm:px-6">
+        <header className="flex items-start justify-between gap-4 border-b border-slate-800 bg-slate-950 px-4 py-3 sm:px-6">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-mono text-lg font-extrabold text-white sm:text-xl">{ticker} option chain</h2>
@@ -127,14 +127,14 @@ export function LiveWheelChainModal({
         </header>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3 sm:px-6">
+          <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-2 sm:px-6">
             <div className="flex items-start gap-2 text-[10px] leading-relaxed text-slate-400">
               <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-300" />
               <p>Provider-returned contracts in the scanner&apos;s 7–70 DTE window. Quotes may be delayed and are informational only; this view does not submit orders. Greeks may be provider-supplied or model-derived as labeled.</p>
             </div>
           </div>
 
-          <div className="space-y-4 p-4 sm:p-6">
+          <div className="space-y-3 p-3 sm:p-4">
             {error && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-xs text-amber-100">
                 <span>{error}</span>
@@ -158,7 +158,7 @@ export function LiveWheelChainModal({
                   </div>
                 ) : null}
 
-                <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3 sm:flex-row sm:items-end">
+                <div className="flex flex-col justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 p-2.5 sm:flex-row sm:items-end">
                   <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter option type">
                     {([ ["all", "Calls + puts"], ["put", "Puts"], ["call", "Calls"] ] as const).map(([value, label]) => (
                       <button
@@ -166,7 +166,7 @@ export function LiveWheelChainModal({
                         type="button"
                         aria-pressed={side === value}
                         onClick={() => { setSide(value); setPage(0); }}
-                        className={`rounded-lg px-3 py-2 text-[10px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${side === value ? "bg-emerald-600 text-slate-950" : "border border-slate-700 bg-slate-950 text-slate-300 hover:text-white"}`}
+                        className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${side === value ? "bg-emerald-600 text-slate-950" : "border border-slate-700 bg-slate-950 text-slate-300 hover:text-white"}`}
                       >
                         {label}
                       </button>
@@ -178,7 +178,7 @@ export function LiveWheelChainModal({
                       <select
                         value={expiration}
                         onChange={(event) => { setExpiration(event.target.value); setPage(0); }}
-                        className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal normal-case tracking-normal text-slate-200 outline-none focus:border-cyan-400/60"
+                        className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs font-normal normal-case tracking-normal text-slate-200 outline-none focus:border-cyan-400/60"
                       >
                         <option value="all">All expirations ({expirations.length})</option>
                         {expirations.map((date) => <option key={date} value={date}>{date} · {daysToExpiration(date)} DTE</option>)}
@@ -193,37 +193,43 @@ export function LiveWheelChainModal({
                     {loading ? "Refreshing contracts…" : "No contracts match these filters."}
                   </div>
                 ) : (
-                  <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_310px]">
+                  <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_310px]">
                     <section className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <h3 className="text-xs font-bold text-slate-200">Provider contracts</h3>
                         <span className="text-[9px] text-slate-500">{filteredContracts.length.toLocaleString()} available · {PAGE_SIZE} per page</span>
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                        {visibleContracts.map((contract) => {
-                          const isSelected = selectedContract?.symbol === contract.symbol;
-                          return (
-                            <button
-                              key={contract.symbol}
-                              type="button"
-                              aria-pressed={isSelected}
-                              onClick={() => selectContract(contract)}
-                              className={`min-w-0 rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${isSelected ? "border-cyan-500/50 bg-cyan-500/10" : "border-slate-800 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900"}`}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase ${contract.type === "put" ? "border-rose-500/20 bg-rose-500/10 text-rose-200" : "border-cyan-500/20 bg-cyan-500/10 text-cyan-200"}`}>{contract.type}</span>
-                                <span className="truncate text-[9px] text-slate-500">{contract.expiration} · {daysToExpiration(contract.expiration)} DTE</span>
-                              </div>
-                              <div className="mt-2 font-mono text-lg font-extrabold text-white">{cash(contract.strike)}</div>
-                              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px]">
-                                <span className="text-slate-500">Bid / ask</span><span className="text-right font-mono text-slate-300">{cash(contract.bid)} / {cash(contract.ask)}</span>
-                                <span className="text-slate-500">Delta</span><span className="text-right font-mono text-slate-300">{contract.delta?.toFixed(3) ?? "N/A"}</span>
-                                <span className="text-slate-500">IV</span><span className="text-right font-mono text-slate-300">{percent(contract.iv)}</span>
-                                <span className="text-slate-500">OI</span><span className="text-right font-mono text-slate-300">{contract.oi?.toLocaleString() ?? "N/A"}</span>
-                              </div>
-                            </button>
-                          );
-                        })}
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[680px]">
+                          <div aria-hidden="true" className="grid grid-cols-[56px_112px_84px_minmax(144px,1fr)_72px_70px_82px] gap-2 border-b border-slate-800 px-2 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                            <span>Type</span><span>Expiration</span><span className="text-right">Strike</span><span className="text-right">Bid / ask</span><span className="text-right">Delta</span><span className="text-right">IV</span><span className="text-right">Open interest</span>
+                          </div>
+                          <div className="divide-y divide-slate-800/80">
+                            {visibleContracts.map((contract) => {
+                              const isSelected = selectedContract?.symbol === contract.symbol;
+                              const days = daysToExpiration(contract.expiration);
+                              return (
+                                <div key={contract.symbol}>
+                                  <button
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    aria-label={`${contract.type} expiring ${contract.expiration}, ${days} days to expiration, strike ${cash(contract.strike)}, bid ${cash(contract.bid)}, ask ${cash(contract.ask)}, delta ${contract.delta?.toFixed(3) ?? "not available"}, implied volatility ${percent(contract.iv)}, open interest ${contract.oi?.toLocaleString() ?? "not available"}`}
+                                    onClick={() => selectContract(contract)}
+                                    className={`grid w-full grid-cols-[56px_112px_84px_minmax(144px,1fr)_72px_70px_82px] items-center gap-2 px-2 py-2 text-left transition focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400 ${isSelected ? "bg-cyan-500/10" : "hover:bg-slate-900"}`}
+                                  >
+                                    <span className={`w-fit rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase ${contract.type === "put" ? "border-rose-500/20 bg-rose-500/10 text-rose-200" : "border-cyan-500/20 bg-cyan-500/10 text-cyan-200"}`}>{contract.type}</span>
+                                    <span className="min-w-0"><span className="block truncate font-mono text-[10px] text-slate-200">{contract.expiration}</span><span className="block text-[9px] text-slate-500">{days} DTE</span></span>
+                                    <span className="text-right font-mono text-xs font-bold text-white">{cash(contract.strike)}</span>
+                                    <span className="text-right font-mono text-[10px] tabular-nums text-slate-300">{cash(contract.bid)} / {cash(contract.ask)}</span>
+                                    <span className="text-right font-mono text-[10px] tabular-nums text-slate-300">{contract.delta?.toFixed(3) ?? "N/A"}</span>
+                                    <span className="text-right font-mono text-[10px] tabular-nums text-slate-300">{percent(contract.iv)}</span>
+                                    <span className="text-right font-mono text-[10px] tabular-nums text-slate-300">{contract.oi?.toLocaleString() ?? "N/A"}</span>
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                       {pageCount > 1 && (
                         <div className="mt-3 flex items-center justify-between border-t border-slate-800 pt-3 text-[10px] text-slate-500">
@@ -237,7 +243,7 @@ export function LiveWheelChainModal({
                       )}
                     </section>
 
-                    <aside ref={selectedDetailsRef} className="scroll-mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4 xl:sticky xl:top-2">
+                    <aside ref={selectedDetailsRef} className="scroll-mt-4 rounded-xl border border-slate-800 bg-slate-900 p-3 xl:sticky xl:top-2">
                       {selectedContract ? (
                         <>
                           <div className="flex items-start justify-between gap-2">
@@ -248,7 +254,7 @@ export function LiveWheelChainModal({
                             </div>
                             <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[10px] text-slate-400">{selectedContract.source}</span>
                           </div>
-                          <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="mt-2 grid grid-cols-2 gap-1.5">
                             <DetailMetric label="Bid / ask" value={`${cash(selectedContract.bid)} / ${cash(selectedContract.ask)}`} />
                             <DetailMetric label="Last" value={cash(selectedContract.last)} />
                             <DetailMetric label="Delta" value={selectedContract.delta?.toFixed(4) ?? "N/A"} />
@@ -275,7 +281,7 @@ export function LiveWheelChainModal({
                           <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Prefills a manual journal entry only. Review the quote and enter your actual fill before saving; no order is submitted.</p>
                         </>
                       ) : (
-                        <div className="grid min-h-40 place-items-center text-center text-[10px] text-slate-500">Choose a contract card to review its quote and Greeks.</div>
+                        <div className="grid min-h-40 place-items-center text-center text-[10px] text-slate-500">Choose a contract row to review its quote and Greeks.</div>
                       )}
                     </aside>
                   </div>
