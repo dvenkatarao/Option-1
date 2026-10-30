@@ -27,6 +27,8 @@ import { RefreshCw, Zap } from 'lucide-react';
 
 const SAMPLE_ETF_SCREENS_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS === 'true';
+const SAMPLE_WHEEL_SCREENS_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_SAMPLE_WHEEL_SCREENS === 'true';
 
 type GlobalStockSearchResponse = {
   query: string;
@@ -62,8 +64,12 @@ export function App() {
   const [portfolioView, setPortfolioView] = useState<'studio' | 'accounts'>('studio');
   const [researchView, setResearchView] = useState<'academy' | 'live'>('academy');
 
-  // Wheel sub-tab
-  const [wheelSubTab, setWheelSubTab] = useState<'scanner' | 'simulator' | 'tracker' | 'live'>('scanner');
+  // Keep the live scanner in the first position when the sample scanner is disabled.
+  const [wheelSubTab, setWheelSubTab] = useState<'scanner' | 'simulator' | 'tracker' | 'live'>(
+    SAMPLE_WHEEL_SCREENS_ENABLED ? 'scanner' : 'live',
+  );
+  const visibleWheelSubTab =
+    !SAMPLE_WHEEL_SCREENS_ENABLED && wheelSubTab === 'scanner' ? 'live' : wheelSubTab;
   const [simulatorInitialStock, setSimulatorInitialStock] = useState<WheelStock | undefined>(undefined);
   const [simulatorInitialOption, setSimulatorInitialOption] = useState<OptionContract | undefined>(undefined);
 
@@ -351,23 +357,25 @@ export function App() {
         {/* WORKSTATION 3: Options Wheel Strategy Command Center */}
         {activeTab === 'wheel' && (
           <div className="space-y-6">
-            {/* Sub-tabs: Scanner vs Simulator vs Position Tracker */}
+            {/* Keep the illustrative scanner opt-in; lead with live provider data otherwise. */}
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
-              <button
-                onClick={() => setWheelSubTab('scanner')}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                  wheelSubTab === 'scanner'
-                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                1. Wheel Opportunity Scanner
-              </button>
+              {SAMPLE_WHEEL_SCREENS_ENABLED && (
+                <button
+                  onClick={() => setWheelSubTab('scanner')}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                    visibleWheelSubTab === 'scanner'
+                      ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  1. Wheel Opportunity Scanner
+                </button>
+              )}
 
               <button
                 onClick={() => setWheelSubTab('simulator')}
                 className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                  wheelSubTab === 'simulator'
+                  visibleWheelSubTab === 'simulator'
                     ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                 }`}
@@ -379,7 +387,7 @@ export function App() {
               <button
                 onClick={() => setWheelSubTab('tracker')}
                 className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                  wheelSubTab === 'tracker'
+                  visibleWheelSubTab === 'tracker'
                     ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                 }`}
@@ -393,16 +401,18 @@ export function App() {
               <button
                 onClick={() => setWheelSubTab('live')}
                 className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                  wheelSubTab === 'live'
+                  visibleWheelSubTab === 'live'
                     ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200'
                 }`}
               >
-                4. Live Provider Scanner & Journal
+                {SAMPLE_WHEEL_SCREENS_ENABLED
+                  ? '4. Live Provider Scanner & Journal'
+                  : '1. Live Provider Scanner & Journal'}
               </button>
             </div>
 
-            {wheelSubTab === 'scanner' && (
+            {visibleWheelSubTab === 'scanner' && (
               <WheelScannerView
                 stocks={wheelStocks}
                 onSelectStockForChain={(stock) => setSelectedStockForChain(stock)}
@@ -411,7 +421,7 @@ export function App() {
               />
             )}
 
-            {wheelSubTab === 'simulator' && (
+            {visibleWheelSubTab === 'simulator' && (
               <WheelSimulatorView
                 stocks={wheelStocks}
                 initialStock={simulatorInitialStock}
@@ -419,16 +429,16 @@ export function App() {
               />
             )}
 
-            {wheelSubTab === 'tracker' && (
+            {visibleWheelSubTab === 'tracker' && (
               <WheelTrackerView
                 campaigns={activeCampaigns}
                 stocks={wheelStocks}
                 onAddCampaign={handleAddCampaign}
-                onNavigateToScanner={() => setWheelSubTab('scanner')}
+                onNavigateToScanner={() => setWheelSubTab(SAMPLE_WHEEL_SCREENS_ENABLED ? 'scanner' : 'live')}
               />
             )}
 
-            {wheelSubTab === 'live' && (
+            {visibleWheelSubTab === 'live' && (
               <LiveWheelView
                 initialDetailTicker={requestedLiveDetailTicker}
                 onInitialDetailTickerOpened={acknowledgeLiveDetailOpen}
