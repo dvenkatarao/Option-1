@@ -17,6 +17,7 @@ import { ResearchAcademyView } from './components/research/ResearchAcademyView';
 import { LiveResearchHub } from './components/live/LiveResearchHub';
 import { LiveEtfScreenerView } from './components/live/LiveEtfScreenerView';
 import { LiveWheelView } from './components/live/LiveWheelView';
+import type { LiveWheelResults } from './components/live/wheel-types';
 import { LiveStockSearchPreview } from './components/live/LiveStockSearchPreview';
 import type { LiveStockSearchProfile } from './lib/live-stock-search';
 import { ETF_DATASET } from './data/etfData';
@@ -64,14 +65,11 @@ export function App() {
   const [portfolioView, setPortfolioView] = useState<'studio' | 'accounts'>('studio');
   const [researchView, setResearchView] = useState<'academy' | 'live'>('academy');
 
-  // Keep the live scanner in the first position when the sample scanner is disabled.
-  const [wheelSubTab, setWheelSubTab] = useState<'scanner' | 'simulator' | 'tracker' | 'live'>(
-    SAMPLE_WHEEL_SCREENS_ENABLED ? 'scanner' : 'live',
-  );
-  const visibleWheelSubTab =
-    !SAMPLE_WHEEL_SCREENS_ENABLED && wheelSubTab === 'scanner' ? 'live' : wheelSubTab;
-  const [simulatorInitialStock, setSimulatorInitialStock] = useState<WheelStock | undefined>(undefined);
-  const [simulatorInitialOption, setSimulatorInitialOption] = useState<OptionContract | undefined>(undefined);
+  // Lead with live provider results; the opt-in sample scanner remains an optional fourth screen.
+  const [wheelSubTab, setWheelSubTab] = useState<'scanner' | 'simulator' | 'tracker' | 'live'>('live');
+  const [liveWheelResults, setLiveWheelResults] = useState<LiveWheelResults | null>(null);
+  const [liveWheelLoading, setLiveWheelLoading] = useState(false);
+  const [simulatorInitialTicker, setSimulatorInitialTicker] = useState<string | null>(null);
 
   // Toggle compare item
   const handleToggleCompare = (symbol: string) => {
@@ -86,15 +84,13 @@ export function App() {
     });
   };
 
-  // Launch Simulator with specific stock & option
-  const handleSelectStockForSimulator = (stock: WheelStock, option?: OptionContract) => {
-    setSimulatorInitialStock(stock);
-    setSimulatorInitialOption(option);
+  // Legacy sample surfaces may request a ticker, but the live simulator resolves it only
+  // against current provider-backed scanner results. Sample prices/contracts are ignored.
+  const handleSelectStockForSimulator = (stock: WheelStock, _sampleOption?: OptionContract) => {
+    setSimulatorInitialTicker(stock.symbol.toUpperCase());
     setActiveTab('wheel');
     setWheelSubTab('simulator');
-    if (selectedStockForChain) {
-      setSelectedStockForChain(null);
-    }
+    if (selectedStockForChain) setSelectedStockForChain(null);
   };
 
   // Add new campaign
@@ -357,91 +353,70 @@ export function App() {
         {/* WORKSTATION 3: Options Wheel Strategy Command Center */}
         {activeTab === 'wheel' && (
           <div className="space-y-6">
-            {/* Keep the illustrative scanner opt-in; lead with live provider data otherwise. */}
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
+            <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3">
+              <button
+                onClick={() => setWheelSubTab('live')}
+                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${wheelSubTab === 'live' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+              >
+                1. Live Provider Scanner &amp; Journal
+              </button>
+              <button
+                onClick={() => setWheelSubTab('simulator')}
+                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5 ${wheelSubTab === 'simulator' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span>2. Interactive Wheel Cycle Simulator</span>
+              </button>
+              <button
+                onClick={() => setWheelSubTab('tracker')}
+                className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5 ${wheelSubTab === 'tracker' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+              >
+                <span>3. Active Positions &amp; Roll Journal</span>
+                <span className="rounded bg-slate-950 px-1.5 py-0.5 font-mono text-[10px] text-slate-200">{activeCampaigns.length}</span>
+              </button>
               {SAMPLE_WHEEL_SCREENS_ENABLED && (
                 <button
                   onClick={() => setWheelSubTab('scanner')}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                    visibleWheelSubTab === 'scanner'
-                      ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition ${wheelSubTab === 'scanner' ? 'bg-emerald-600 font-bold text-slate-950 shadow-md shadow-emerald-600/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
                 >
-                  1. Wheel Opportunity Scanner
+                  4. Wheel Opportunity Scanner
                 </button>
               )}
-
-              <button
-                onClick={() => setWheelSubTab('simulator')}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                  visibleWheelSubTab === 'simulator'
-                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>2. Interactive Wheel Cycle Simulator</span>
-              </button>
-
-              <button
-                onClick={() => setWheelSubTab('tracker')}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                  visibleWheelSubTab === 'tracker'
-                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>3. Active Positions & Roll Journal</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-slate-200">
-                  {activeCampaigns.length}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setWheelSubTab('live')}
-                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                  visibleWheelSubTab === 'live'
-                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {SAMPLE_WHEEL_SCREENS_ENABLED
-                  ? '4. Live Provider Scanner & Journal'
-                  : '1. Live Provider Scanner & Journal'}
-              </button>
             </div>
 
-            {visibleWheelSubTab === 'scanner' && (
+            <div className={wheelSubTab === 'live' ? 'block' : 'hidden'} aria-hidden={wheelSubTab !== 'live'}>
+              <LiveWheelView
+                initialDetailTicker={requestedLiveDetailTicker}
+                onInitialDetailTickerOpened={acknowledgeLiveDetailOpen}
+                onResultsChange={setLiveWheelResults}
+                onResultsLoadingChange={setLiveWheelLoading}
+              />
+            </div>
+
+            {wheelSubTab === 'simulator' && (
+              <WheelSimulatorView
+                results={liveWheelResults}
+                resultsLoading={liveWheelLoading}
+                initialTicker={simulatorInitialTicker}
+                onOpenLiveScanner={() => setWheelSubTab('live')}
+              />
+            )}
+
+            {wheelSubTab === 'tracker' && (
+              <WheelTrackerView
+                campaigns={activeCampaigns}
+                stocks={wheelStocks}
+                onAddCampaign={handleAddCampaign}
+                onNavigateToScanner={() => setWheelSubTab('live')}
+              />
+            )}
+
+            {SAMPLE_WHEEL_SCREENS_ENABLED && wheelSubTab === 'scanner' && (
               <WheelScannerView
                 stocks={wheelStocks}
                 onSelectStockForChain={(stock) => setSelectedStockForChain(stock)}
                 onSelectStockForSimulator={handleSelectStockForSimulator}
                 onOpenNewCampaign={(stock) => handleSelectStockForSimulator(stock)}
-              />
-            )}
-
-            {visibleWheelSubTab === 'simulator' && (
-              <WheelSimulatorView
-                stocks={wheelStocks}
-                initialStock={simulatorInitialStock}
-                initialOption={simulatorInitialOption}
-              />
-            )}
-
-            {visibleWheelSubTab === 'tracker' && (
-              <WheelTrackerView
-                campaigns={activeCampaigns}
-                stocks={wheelStocks}
-                onAddCampaign={handleAddCampaign}
-                onNavigateToScanner={() => setWheelSubTab(SAMPLE_WHEEL_SCREENS_ENABLED ? 'scanner' : 'live')}
-              />
-            )}
-
-            {visibleWheelSubTab === 'live' && (
-              <LiveWheelView
-                initialDetailTicker={requestedLiveDetailTicker}
-                onInitialDetailTickerOpened={acknowledgeLiveDetailOpen}
               />
             )}
           </div>
