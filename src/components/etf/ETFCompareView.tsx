@@ -194,7 +194,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-800/80 font-medium">
               {/* Strategy Category */}
-              <tr className="hover:bg-slate-850/50">
+              <tr className="hover:bg-slate-800/50">
                 <td className="py-3 px-4 text-slate-400 font-sans">Strategy Category</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4 font-sans text-slate-200">
@@ -206,7 +206,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* Dividend Yield */}
-              <tr className="hover:bg-slate-850/50 bg-slate-950/30">
+              <tr className="hover:bg-slate-800/50 bg-slate-950/30">
                 <td className="py-3 px-4 text-slate-400 font-sans font-semibold">Dividend Yield</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4">
@@ -221,7 +221,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* 5-Yr Dividend CAGR */}
-              <tr className="hover:bg-slate-850/50">
+              <tr className="hover:bg-slate-800/50">
                 <td className="py-3 px-4 text-slate-400 font-sans">5Y Dividend Growth</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4">
@@ -241,7 +241,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* Next Ex-Dividend Date */}
-              <tr className="hover:bg-slate-850/50">
+              <tr className="hover:bg-slate-800/50">
                 <td className="py-3 px-4 text-slate-400 font-sans">Next Ex-Div Date</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4 text-cyan-300 font-semibold">
@@ -251,7 +251,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* NAV Erosion Health */}
-              <tr className="hover:bg-slate-850/50 bg-slate-950/30">
+              <tr className="hover:bg-slate-800/50 bg-slate-950/30">
                 <td className="py-3 px-4 text-slate-400 font-sans font-semibold">NAV Erosion Health</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4">
@@ -269,7 +269,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* Expense Ratio */}
-              <tr className="hover:bg-slate-850/50">
+              <tr className="hover:bg-slate-800/50">
                 <td className="py-3 px-4 text-slate-400 font-sans">Annual Expense Fee</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4">
@@ -288,7 +288,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* 5-Year Total Return */}
-              <tr className="hover:bg-slate-850/50">
+              <tr className="hover:bg-slate-800/50">
                 <td className="py-3 px-4 text-slate-400 font-sans font-semibold">5Y Total Return</td>
                 {comparedETFs.map((etf) => {
                   const ret5Y = etf.performanceHistory.find((p) => p.period === '5Y')?.navTotalReturn || 0;
@@ -301,7 +301,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* Beta & Risk */}
-              <tr className="hover:bg-slate-850/50">
+              <tr className="hover:bg-slate-800/50">
                 <td className="py-3 px-4 text-slate-400 font-sans">Beta / Sharpe</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4 text-slate-300">
@@ -311,7 +311,7 @@ export const ETFCompareView: React.FC<ETFCompareViewProps> = ({
               </tr>
 
               {/* Morningstar Rating */}
-              <tr className="hover:bg-slate-850/50">
+              <tr className="hover:bg-slate-800/50">
                 <td className="py-3 px-4 text-slate-400 font-sans">Morningstar Rating</td>
                 {comparedETFs.map((etf) => (
                   <td key={etf.symbol} className="py-3 px-4">

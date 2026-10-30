@@ -176,7 +176,7 @@ export const ResearchAcademyView: React.FC<ResearchAcademyViewProps> = ({
                 <div
                   key={stock.symbol}
                   onClick={() => onSelectWheelStock(stock)}
-                  className="cursor-pointer hover:bg-slate-900 p-2 rounded-lg flex items-center justify-between border border-slate-850 transition"
+                  className="cursor-pointer hover:bg-slate-900 p-2 rounded-lg flex items-center justify-between border border-slate-800 transition"
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white">{stock.symbol}</span>
@@ -203,7 +203,7 @@ export const ResearchAcademyView: React.FC<ResearchAcademyViewProps> = ({
                 <div
                   key={etf.symbol}
                   onClick={() => onSelectETF(etf)}
-                  className="cursor-pointer hover:bg-slate-900 p-2 rounded-lg flex items-center justify-between border border-slate-850 transition"
+                  className="cursor-pointer hover:bg-slate-900 p-2 rounded-lg flex items-center justify-between border border-slate-800 transition"
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-emerald-400">{etf.symbol}</span>

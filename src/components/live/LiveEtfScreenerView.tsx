@@ -133,7 +133,7 @@ function ReturnChart({ history }: { history: History | null }) {
         <polyline points={chart.price} fill="none" stroke="#67e8f9" strokeWidth="2" vectorEffect="non-scaling-stroke" />
         <polyline points={chart.total} fill="none" stroke="#34d399" strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="flex justify-between text-[10px] text-slate-600"><span>100 baseline</span><span>Index range {chart.low.toFixed(0)}–{chart.high.toFixed(0)}</span></div>
+      <div className="flex justify-between text-[10px] text-slate-500"><span>100 baseline</span><span>Index range {chart.low.toFixed(0)}–{chart.high.toFixed(0)}</span></div>
     </div>
   );
 }
@@ -186,13 +186,13 @@ function EtfDetail({ ticker, onClose }: { ticker: string; onClose: () => void })
               <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-300" /><h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Plain-English ETF takeaway</h4><span className="rounded-full border border-slate-700 bg-slate-950/70 px-2 py-0.5 text-[9px] text-slate-400">rules-based, not personalized</span></div>
               <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-100">{detail.takeaway.headline}</p>
               <p className="mt-2 text-xs leading-relaxed text-slate-400">{detail.takeaway.detail}</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Heuristic context</div><p className="mt-1 text-xs leading-relaxed text-slate-300">{detail.takeaway.suitable}</p></div><div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3"><div className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">What to watch</div><p className="mt-1 text-xs leading-relaxed text-slate-300">{detail.takeaway.watch}</p></div></div>
-              <p className="mt-3 text-[9px] leading-relaxed text-slate-600">Source context: {detail.takeaway.context.sources.join(" · ") || "provider metadata unavailable"}. Price history as of {detail.takeaway.context.historyAsOf ?? "N/A"}; quote fetched {stamp(detail.takeaway.context.quoteFetchedAt)}.</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Heuristic context</div><p className="mt-1 text-xs leading-relaxed text-slate-300">{detail.takeaway.suitable}</p></div><div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-amber-300/70">What to watch</div><p className="mt-1 text-xs leading-relaxed text-slate-300">{detail.takeaway.watch}</p></div></div>
+              <p className="mt-3 text-[10px] leading-relaxed text-slate-500">Source context: {detail.takeaway.context.sources.join(" · ") || "provider metadata unavailable"}. Price history as of {detail.takeaway.context.historyAsOf ?? "N/A"}; quote fetched {stamp(detail.takeaway.context.quoteFetchedAt)}.</p>
             </section>}
             <section className="rounded-xl border border-slate-800 bg-slate-950 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2"><div><h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Deterministic trend signals</h4><p className="mt-1 text-[10px] text-slate-500">Stored daily price history · as of {detail.technical.asOf ?? "N/A"} · {detail.technical.bars} valid bars</p></div><span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${detail.technical.state === "uptrend" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : detail.technical.state === "downtrend" ? "border-rose-500/20 bg-rose-500/10 text-rose-300" : "border-amber-500/20 bg-amber-500/10 text-amber-200"}`}>{detail.technical.state}</span></div>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Last split-adjusted close" value={money(detail.technical.price)} hint={detail.technical.aboveSma50 == null ? "Not enough history" : detail.technical.aboveSma50 ? "Above 50-day average" : "At/below 50-day average"} /><Metric label="SMA 50" value={money(detail.technical.sma50)} /><Metric label="SMA 200" value={money(detail.technical.sma200)} hint={detail.technical.movingAverageAlignment ?? "Requires 200 closes"} /><Metric label="RSI 14" value={detail.technical.rsi14?.toFixed(1) ?? "N/A"} hint={detail.technical.rsiState} /></div>
-              <p className="mt-3 text-[9px] leading-relaxed text-slate-600">{detail.technical.methodology}</p>
+              <p className="mt-3 text-[10px] leading-relaxed text-slate-500">{detail.technical.methodology}</p>
             </section>
             <ReturnChart history={detail.history} />
             <div className="grid gap-4 lg:grid-cols-2">

@@ -30,7 +30,7 @@ const daysToExpiration = (expiration: string) => Math.max(0, Math.round((Date.pa
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/70 px-2.5 py-2">
-      <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
       <div className="mt-1 break-words font-mono text-xs font-semibold text-slate-200">{value}</div>
     </div>
   );
@@ -106,8 +106,8 @@ export function LiveWheelChainModal({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-mono text-lg font-extrabold text-white sm:text-xl">{ticker} option chain</h2>
-              {chain?.stale && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[9px] font-semibold text-amber-200">Cached / stale</span>}
-              {chain && !chain.stale && <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[9px] font-semibold text-emerald-200">Provider snapshot</span>}
+              {chain?.stale && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-200">Cached / stale</span>}
+              {chain && !chain.stale && <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-200">Provider snapshot</span>}
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-400">
               <span>Underlying <b className="font-mono text-slate-200">{chain ? cash(chain.price) : "Loading…"}</b></span>
@@ -173,7 +173,7 @@ export function LiveWheelChainModal({
                     ))}
                   </div>
                   <div className="flex flex-wrap items-end gap-2">
-                    <label className="min-w-44 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                    <label className="min-w-44 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                       Expiration
                       <select
                         value={expiration}
@@ -242,11 +242,11 @@ export function LiveWheelChainModal({
                         <>
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <div className="text-[9px] font-bold uppercase tracking-wider text-cyan-300">Selected contract</div>
+                              <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Selected contract</div>
                               <h3 className="mt-1 font-mono text-lg font-extrabold text-white">{cash(selectedContract.strike)} {selectedContract.type}</h3>
                               <p className="mt-0.5 text-[10px] text-slate-400">{selectedContract.expiration} · {daysToExpiration(selectedContract.expiration)} DTE</p>
                             </div>
-                            <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[9px] text-slate-400">{selectedContract.source}</span>
+                            <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[10px] text-slate-400">{selectedContract.source}</span>
                           </div>
                           <div className="mt-3 grid grid-cols-2 gap-2">
                             <DetailMetric label="Bid / ask" value={`${cash(selectedContract.bid)} / ${cash(selectedContract.ask)}`} />
@@ -260,7 +260,7 @@ export function LiveWheelChainModal({
                             <DetailMetric label="Vega" value={selectedContract.vega?.toFixed(5) ?? "N/A"} />
                             <DetailMetric label="Rho" value={selectedContract.rho?.toFixed(5) ?? "N/A"} />
                           </div>
-                          <div className="mt-3 space-y-1 text-[9px] leading-relaxed text-slate-500">
+                          <div className="mt-3 space-y-1 text-[10px] leading-relaxed text-slate-500">
                             <p>Greeks: {selectedContract.greeksSource ?? selectedContract.deltaSource ?? "unavailable"}</p>
                             <p>Quote time: {stamp(selectedContract.quoteTimestamp)}</p>
                           </div>
@@ -272,7 +272,7 @@ export function LiveWheelChainModal({
                           >
                             Use contract in journal
                           </button>
-                          <p className="mt-2 text-[9px] leading-relaxed text-slate-500">Prefills a manual journal entry only. Review the quote and enter your actual fill before saving; no order is submitted.</p>
+                          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Prefills a manual journal entry only. Review the quote and enter your actual fill before saving; no order is submitted.</p>
                         </>
                       ) : (
                         <div className="grid min-h-40 place-items-center text-center text-[10px] text-slate-500">Choose a contract card to review its quote and Greeks.</div>

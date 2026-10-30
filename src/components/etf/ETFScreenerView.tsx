@@ -534,7 +534,7 @@ export const ETFScreenerView: React.FC<ETFScreenerViewProps> = ({
               <div
                 key={etf.symbol}
                 onClick={() => onSelectETF(etf)}
-                className="cursor-pointer bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-5 transition-all shadow-md group flex flex-col justify-between"
+                className="cursor-pointer bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-5 transition-all shadow-md group flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between">

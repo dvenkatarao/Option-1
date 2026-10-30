@@ -131,7 +131,7 @@ export function LiveStockSearchPreview({
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-mono text-xl font-extrabold text-white">{ticker}</h2>
               {profile?.stock.grade && <span title="Grade is a WheelCore heuristic based on stored provider fundamentals." className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-300">Grade {profile.stock.grade}</span>}
-              {profile?.quoteStale && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[9px] text-amber-200">Stale quote</span>}
+              {profile?.quoteStale && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">Stale quote</span>}
             </div>
             <p className="mt-1 text-xs text-slate-400">{profile?.stock.name ?? (loading ? "Loading live profile…" : "Live stock profile")}{profile?.stock.sector ? ` · ${profile.stock.sector}` : ""}</p>
           </div>
@@ -169,21 +169,21 @@ export function LiveStockSearchPreview({
               )}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Underlying</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Underlying</div>
                   <div className="mt-1 font-mono text-lg font-bold text-white">{cash(quotePrice)}</div>
-                  <div className="mt-1 text-[9px] text-slate-600">{profile.quote?.price == null ? (profile.stock.storedPrice == null ? "Quote unavailable" : "Stored close fallback") : profile.quote.marketState ?? "Provider quote"}</div>
+                  <div className="mt-1 text-[10px] text-slate-500">{profile.quote?.price == null ? (profile.stock.storedPrice == null ? "Quote unavailable" : "Stored close fallback") : profile.quote.marketState ?? "Provider quote"}</div>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Day change</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Day change</div>
                   <div className={`mt-1 font-mono text-lg font-bold ${quoteChangePct != null && quoteChangePct < 0 ? "text-rose-300" : "text-emerald-300"}`}>{quoteChangePct == null ? "N/A" : `${quoteChangePct.toFixed(2)}%`}</div>
-                  <div className="mt-1 text-[9px] text-slate-600">Yahoo percentage points</div>
+                  <div className="mt-1 text-[10px] text-slate-500">Yahoo percentage points</div>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Market cap</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Market cap</div>
                   <div className="mt-1 font-mono text-sm font-bold text-slate-200">{cash(profile.stock.marketCap)}</div>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Next earnings</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Next earnings</div>
                   <div className="mt-1 inline-flex items-center gap-1.5 font-mono text-xs font-bold text-slate-200"><CalendarClock className="h-3.5 w-3.5 text-amber-300" />{profile.stock.events?.nextEarnings ?? "Unknown"}{profile.stock.events?.earningsEstimated ? " · est." : ""}</div>
                 </div>
               </div>
@@ -197,7 +197,7 @@ export function LiveStockSearchPreview({
               {profile.stock.lastError && <p className="rounded-lg border border-amber-500/15 bg-amber-500/5 px-3 py-2 text-[10px] leading-relaxed text-amber-100/80">Latest provider refresh failed; the stored profile values are retained. {profileComplete ? profile.stock.lastError : `Incomplete stored profile: ${profile.stock.lastError}`}</p>}
 
               <div className="flex flex-col-reverse justify-between gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:items-center">
-                <p className="text-[9px] leading-relaxed text-slate-500">Quotes may be delayed. The grade is a WheelCore research heuristic; this preview is not broker-connected and does not place orders.</p>
+                <p className="text-[10px] leading-relaxed text-slate-500">Quotes may be delayed. The grade is a WheelCore research heuristic; this preview is not broker-connected and does not place orders.</p>
                 {profileComplete ? (
                   <button type="button" onClick={() => onOpenDetail(ticker)} className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300">Detail Workspace</button>
                 ) : (
