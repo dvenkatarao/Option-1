@@ -248,25 +248,25 @@ export function LiveEtfScreenerView() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 p-5 shadow-xl sm:p-6">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-400"><Database className="h-4 w-4" /> Provider-backed ETF universe</div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-extrabold text-white">ETF Intelligence &amp; Screener</h1>
-              <span aria-live="polite" className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-bold text-emerald-400">
-                {loading ? "Loading funds…" : data ? `${filteredRows.length} Funds Found` : "Count unavailable"}
-              </span>
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">Research dividends, ex-dates, expense drag, NAV erosion risks, underlying holdings, and long-term total return.</p>
+      <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+        <div className="max-w-3xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <Database className="h-6 w-6 shrink-0 text-emerald-400" />
+            <h1 className="text-2xl font-extrabold text-white">ETF Intelligence &amp; Screener</h1>
+            <span aria-live="polite" className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-bold text-emerald-400">
+              {loading ? "Loading funds…" : data ? `${filteredRows.length} Funds Found` : "Count unavailable"}
+            </span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => void load()} disabled={loading || refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/50 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button>
-            <button onClick={() => void discover()} disabled={discovering || refreshing || !data?.universe.configured} title={!data?.universe.configured ? "Configure POLYGON_API_KEY on the server to discover the full universe" : "Refresh the active U.S.-listed ETF ticker catalog; this does not hydrate prices or profiles"} className="inline-flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:border-cyan-400/60 hover:text-white disabled:opacity-50"><Database className={`h-3.5 w-3.5 ${discovering ? "animate-pulse" : ""}`} />{discovering ? "Discovering…" : "Discover universe"}</button>
-            <button onClick={() => void refresh()} disabled={refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />{refreshing ? "Refreshing…" : "Hydrate next 8"}</button>
-          </div>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400"><span className="font-semibold text-emerald-300">Provider-backed ETF universe.</span> Research dividends, ex-dates, expense drag, NAV erosion risks, underlying holdings, and long-term total return.</p>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => void load()} disabled={loading || refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-500/50 hover:text-white disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Reload</button>
+          <button onClick={() => void discover()} disabled={discovering || refreshing || !data?.universe.configured} title={!data?.universe.configured ? "Configure POLYGON_API_KEY on the server to discover the full universe" : "Refresh the active U.S.-listed ETF ticker catalog; this does not hydrate prices or profiles"} className="inline-flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:border-cyan-400/60 hover:text-white disabled:opacity-50"><Database className={`h-3.5 w-3.5 ${discovering ? "animate-pulse" : ""}`} />{discovering ? "Discovering…" : "Discover universe"}</button>
+          <button onClick={() => void refresh()} disabled={refreshing || discovering} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />{refreshing ? "Refreshing…" : "Hydrate next 8"}</button>
+        </div>
+      </header>
+      <section className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 p-5 shadow-xl sm:p-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Metric label="Stored funds" value={data ? `${data.hydrated}` : "—"} />
           <Metric label="Universe" value={data ? `${data.totalUniverse}` : "—"} />
           <Metric label="Pending" value={data ? `${data.remaining}` : "—"} />
