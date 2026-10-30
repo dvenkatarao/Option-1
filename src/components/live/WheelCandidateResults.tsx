@@ -1,4 +1,4 @@
-import { LayoutGrid, List } from "lucide-react";
+import { CircleHelp, LayoutGrid, List } from "lucide-react";
 import type { LiveWheelResults, LiveWheelRow } from "./wheel-types";
 
 const cash = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "N/A" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
@@ -40,7 +40,7 @@ function CandidateCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => onOpenDetail(ticker)} className="font-mono text-xl font-extrabold leading-none text-white transition group-hover:text-emerald-400" aria-label={`Open ${ticker} detail workspace`}>{ticker}</button>
-              <span title="Wheel ranking heuristic; not probability of profit." className="rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">Wheel Score {score}{score === "N/A" ? "" : "/100"}</span>
+              <span title="Higher scores rank ahead when sorting by score; this is a ranking heuristic, not probability of profit." className="rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">Wheel Score {score}{score === "N/A" ? "" : " pts"}</span>
             </div>
             <p className="mt-1 break-words text-xs font-medium text-slate-400">{row.g.row.name ?? "Provider-backed stock"}</p>
           </div>
@@ -60,10 +60,10 @@ function CandidateCard({
             <div className="mt-0.5 break-words font-bold text-emerald-300">{row.g.grade ?? "N/A"}</div>
           </div>
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">IV rank</div>
+            <div title="Relative IV percentile for this ticker; higher can mean richer premium and higher expected movement/risk." className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">IV rank</div>
             <div className="mt-0.5 break-words font-bold text-cyan-300">{ivRank == null ? "N/A" : `${ivRank}%`}</div>
           </div>
-          <div title="Model-derived account-fit hint; not connected to a brokerage account.">
+          <div title="R = retirement, T = taxable, R/T = either. This model-derived hint is not connected to an account and is not tax advice.">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Account hint</div>
             <div className="mt-0.5 break-words font-bold text-cyan-200">{row.best.account.flag}</div>
           </div>
@@ -136,7 +136,7 @@ export function WheelCandidateResults({
       <div className="flex flex-col justify-between gap-3 border-b border-slate-800 px-4 py-3 sm:flex-row sm:items-center">
         <div>
           <h3 className="text-sm font-bold text-white">Cash-secured put candidates</h3>
-          <p className="mt-1 text-[10px] text-slate-500">Best qualifying contract per ticker · score is a ranking heuristic, not probability of profit.</p>
+          <p className="mt-1 text-[10px] text-slate-500">Best qualifying contract per ticker · higher score ranks ahead when score sorting is selected (not a win probability).</p>
         </div>
         <div className="flex items-center justify-between gap-3 sm:justify-end">
           <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-mono text-slate-400">{results?.rows.length ?? 0} candidates</span>
@@ -164,6 +164,23 @@ export function WheelCandidateResults({
           </div>
         </div>
       </div>
+
+      <details className="border-b border-slate-800 bg-slate-950/20">
+        <summary className="flex cursor-pointer items-start gap-2 px-4 py-2.5 text-xs text-cyan-200 transition hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400 sm:items-center">
+          <CircleHelp aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 sm:mt-0" />
+          <span className="font-semibold">How to read this card</span>
+          <span className="ml-auto hidden text-right text-[10px] text-slate-500 md:block">Higher score ranks ahead · higher IV Rank can mean richer premiums and more risk</span>
+        </summary>
+        <div className="grid gap-3 border-t border-slate-800 bg-slate-950/40 px-4 py-3 text-[11px] leading-relaxed text-slate-400 sm:grid-cols-2 xl:grid-cols-3">
+          <p><strong className="text-slate-200">Wheel Score.</strong> Higher scores rank ahead when score sorting is selected (the default). It combines annualized ROC, delta/OTM, liquidity, and structure factors; it is not a chance of profit, and IV Rank is not scored directly.</p>
+          <p><strong className="text-slate-200">IV Rank.</strong> Relative to this ticker&apos;s stored IV observations, higher readings can mean richer option premiums and greater expected movement/risk. A 0% rank is a low relative reading, not zero volatility; stale scans may show old values.</p>
+          <p><strong className="text-slate-200">Delta, OTM proxy &amp; DTE.</strong> Put delta is negative. The proxy is 1 − |delta|; a higher proxy generally means farther out of the money, not a measured win rate. DTE is days to expiry; neither longer nor shorter is always better.</p>
+          <p><strong className="text-slate-200">Credit &amp; annualized ROC.</strong> Credit is estimated from bid + 25% of the bid/ask spread. ROC = credit ÷ (strike − credit), annualized by 365 ÷ DTE. Higher is a larger modeled return, not a forecast, and may come with more risk; costs are excluded.</p>
+          <p><strong className="text-slate-200">Collateral, breakeven &amp; cushion.</strong> Cash secured is strike × 100 per standard contract; lower means less collateral, not automatically a better trade. Breakeven is strike − estimated credit. Cushion is the underlying&apos;s distance above breakeven at scan time—not a loss limit.</p>
+          <p><strong className="text-slate-200">Quality &amp; account hint.</strong> A higher quality grade indicates a stronger rules-based stock assessment, not a better option. R = retirement, T = taxable, R/T = either—a general heuristic, not account-specific or tax advice.</p>
+          <p><strong className="text-slate-200">Count &amp; freshness.</strong> Qualifying contracts passed the active filters; it is not a trade count. Source and scan time show provenance; “Stale scan” means the displayed market data may need refreshing.</p>
+        </div>
+      </details>
 
       {loading && !results ? (
         <div className="p-8 text-center text-xs text-slate-400">Loading provider-backed scan results…</div>
