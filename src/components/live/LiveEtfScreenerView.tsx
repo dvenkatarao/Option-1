@@ -22,6 +22,7 @@ import {
 import type { ScreenRow } from "../../types/liveScreener";
 import { filterLiveEtfs, sortLiveEtfs, type LiveErosionFilter, type LiveSortDirection, type LiveSortKey } from "../../lib/live-etf-screener";
 import { LiveEtfDetailModal } from "./LiveEtfDetailModal";
+import { LiveEtfCompareView } from "./LiveEtfCompareView";
 
 type EtfUniverseStatus = {
   configured: boolean;
@@ -119,44 +120,9 @@ function ErosionBadge({ value }: { value: string }) {
   return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-semibold ${tone}`}><Icon className="h-3 w-3" />{value === "n/a" ? "N/A" : value}</span>;
 }
 
-function CompareModal({ rows, onClose }: { rows: ScreenRow[]; onClose: () => void }) {
-  const fields: { label: string; value: (row: ScreenRow) => string }[] = [
-    { label: "Provider category", value: (row) => row.category ?? "N/A" },
-    { label: "Quality grade", value: (row) => row.quality ? `${row.quality}${row.qualityScore == null ? "" : ` · ${row.qualityScore.toFixed(0)}`}` : "N/A" },
-    { label: "Price", value: (row) => money(row.price) },
-    { label: "Day change", value: (row) => changeLabel(row.changePct) },
-    { label: "TTM yield", value: (row) => pct(row.yieldTtm) },
-    { label: "Last ex-date", value: (row) => dateLabel(row.lastExDate) },
-    { label: "5Y distribution CAGR", value: (row) => pct(row.divCagr5y) },
-    { label: "Expense ratio", value: (row) => pct(row.expense) },
-    { label: "Assets under management", value: (row) => aum(row.aum) },
-    { label: "YTD total return", value: (row) => pct(row.ytd) },
-    { label: "1Y total return", value: (row) => pct(row.r1y) },
-    { label: "3Y total return (ann.)", value: (row) => pct(row.r3y) },
-    { label: "5Y total return (ann.)", value: (row) => pct(row.r5y) },
-    { label: "3Y distribution CAGR", value: (row) => pct(row.divCagr3y) },
-    { label: "Max drawdown 3Y", value: (row) => pct(row.dd3y) },
-    { label: "NAV erosion proxy", value: (row) => row.erosion === "n/a" ? "N/A" : row.erosion },
-    { label: "Asset class / exposure", value: (row) => `${row.assetClass}${row.leveraged ? " · leveraged/inverse" : ""}` },
-    { label: "Rate sensitivity", value: (row) => row.rateLabel },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto bg-black/80 p-3 backdrop-blur-md sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="mx-auto my-4 max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl sm:my-8" role="dialog" aria-modal="true" aria-label="Compare live ETFs">
-        <header className="flex items-start justify-between gap-4 border-b border-slate-800 bg-slate-950 p-5"><div><div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Provider-backed comparison</div><h2 className="mt-1 text-xl font-extrabold text-white">Live ETF Head-to-Head</h2><p className="mt-1 text-xs text-slate-400">Only stored provider-backed values are compared. Missing fields remain N/A; this is not a forecast.</p></div><button onClick={onClose} aria-label="Close comparison" className="rounded-lg bg-slate-800 p-2 text-slate-400 hover:text-white"><span className="text-lg leading-none">×</span></button></header>
-        <div className="max-h-[calc(92vh-90px)] overflow-auto p-4 sm:p-6">
-          <div className="mb-4 flex flex-wrap gap-2">{rows.map((row) => <span key={row.ticker} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-xs font-bold text-emerald-300">{row.ticker}<span className="ml-2 font-sans font-normal text-slate-400">{row.name ?? ""}</span></span>)}</div>
-          <div className="overflow-x-auto rounded-xl border border-slate-800"><table className="w-full min-w-[640px] border-collapse text-left text-xs"><thead className="sticky top-0 bg-slate-950 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="w-48 border-b border-slate-800 px-4 py-3">Metric</th>{rows.map((row) => <th key={row.ticker} className="border-b border-slate-800 px-4 py-3 font-mono text-emerald-300">{row.ticker}</th>)}</tr></thead><tbody className="divide-y divide-slate-800/80">{fields.map((field) => <tr key={field.label} className="hover:bg-slate-800/40"><th className="bg-slate-950/40 px-4 py-3 font-sans font-semibold text-slate-400">{field.label}</th>{rows.map((row) => <td key={`${field.label}-${row.ticker}`} className="px-4 py-3 font-mono text-slate-200">{field.value(row)}</td>)}</tr>)}</tbody></table></div>
-          <p className="mt-3 text-[10px] text-slate-500">Returns are based on stored distribution-adjusted history. NAV erosion is a market-price proxy. The 5Y distribution CAGR is calculated only when the underlying history covers both rolling 12-month comparison windows.</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function LiveEtfScreenerView() {
   const [data, setData] = useState<ScreenerResponse | null>(null);
+  const [availableRows, setAvailableRows] = useState<ScreenRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [discovering, setDiscovering] = useState(false);
@@ -187,6 +153,12 @@ export function LiveEtfScreenerView() {
       const result = await requestJson<ScreenerResponse>(`/api/etfs${search ? `?q=${encodeURIComponent(search)}` : ""}`);
       if (requestId === requestSequence.current) {
         setData(result);
+        setAvailableRows((current) => {
+          if (!search) return result.rows;
+          const byTicker = new Map(current.map((row) => [row.ticker, row]));
+          result.rows.forEach((row) => byTicker.set(row.ticker, row));
+          return [...byTicker.values()];
+        });
         setSelectedForCompare((current) => current.map((selected) => result.rows.find((row) => row.ticker === selected.ticker) ?? selected));
       }
     } catch (reason) {
@@ -263,6 +235,17 @@ export function LiveEtfScreenerView() {
   const hasAdvancedFilters = minYield > 0 || maxExpense < 1 || erosionFilter !== "ALL" || frequencyFilter !== "ALL" || categoryFilter !== "ALL";
   const frequencies = ["Weekly", "Monthly", "Quarterly", "Semi-annual", "Annual / irregular", "None in 12m", "None"];
 
+  if (compareOpen) {
+    return <LiveEtfCompareView
+      rows={selectedForCompare}
+      availableRows={availableRows}
+      sourceAsOf={data?.refreshedAt ?? null}
+      sourceStale={data?.stale ?? false}
+      onToggleCompare={toggleCompare}
+      onBack={() => setCompareOpen(false)}
+    />;
+  }
+
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 p-5 shadow-xl sm:p-6">
@@ -307,7 +290,8 @@ export function LiveEtfScreenerView() {
           <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end">
             <button onClick={() => setShowFilters((open) => !open)} aria-expanded={showFilters} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${showFilters || hasAdvancedFilters ? "border-emerald-500/40 bg-emerald-950/60 text-emerald-300" : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800"}`}><SlidersHorizontal className="h-3.5 w-3.5" />Multi-Filter Controls{hasAdvancedFilters && <span className="h-2 w-2 rounded-full bg-emerald-400" />}</button>
             <div className="flex items-center rounded-lg border border-slate-800 bg-slate-950 p-1"><button onClick={() => setViewMode("table")} title="Table view" aria-label="Table view" className={`rounded p-1.5 ${viewMode === "table" ? "bg-slate-800 text-emerald-300" : "text-slate-500 hover:text-slate-200"}`}><List className="h-4 w-4" /></button><button onClick={() => setViewMode("cards")} title="Card view" aria-label="Card view" className={`rounded p-1.5 ${viewMode === "cards" ? "bg-slate-800 text-emerald-300" : "text-slate-500 hover:text-slate-200"}`}><LayoutGrid className="h-4 w-4" /></button></div>
-            {selectedForCompare.length > 0 && <button onClick={() => setCompareOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/10"><span>Compare Selected ({selectedForCompare.length})</span><Activity className="h-3.5 w-3.5" /></button>}
+            {selectedForCompare.length === 1 && <span className="text-[10px] text-slate-500">Select one more ETF to compare</span>}
+            {selectedForCompare.length >= 2 && <button onClick={() => setCompareOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/10"><span>Compare Selected ({selectedForCompare.length})</span><Activity className="h-3.5 w-3.5" /></button>}
             {selectedForCompare.length > 0 && <button onClick={() => setSelectedForCompare([])} className="rounded-lg border border-slate-800 px-2.5 py-2 text-xs text-slate-400 hover:text-white">Clear</button>}
           </div>
         </div>
@@ -408,8 +392,7 @@ export function LiveEtfScreenerView() {
         <div className="mt-3 grid gap-2 leading-relaxed sm:grid-cols-2"><p><b className="text-slate-200">Returns:</b> total return uses distribution-adjusted history; periods over one year are annualized.</p><p><b className="text-slate-200">5Y dividend CAGR:</b> compares rolling TTM distributions five years apart and requires six years of history.</p><p><b className="text-slate-200">Last ex-date:</b> the latest historical distribution event, not a future calendar estimate.</p><p><b className="text-slate-200">NAV erosion:</b> market-price proxy; not an official return-of-capital determination.</p><p><b className="text-slate-200">Quality:</b> rules-based product-construction grade, not a Morningstar rating or return forecast.</p><p><b className="text-slate-200">Missing values:</b> provider gaps remain N/A. Failed refreshes do not overwrite stored good data.</p></div>
       </details>
 
-      {selectedTicker && <LiveEtfDetailModal key={selectedTicker} row={data?.rows.find((row) => row.ticker === selectedTicker) ?? selectedForCompare.find((row) => row.ticker === selectedTicker) ?? { ticker: selectedTicker, name: null, category: null, family: null, leveraged: false, assetClass: "Other", rateTag: "neutral", rateLabel: "Rate context unavailable", quality: null, qualityScore: null, price: null, changePct: null, expense: null, yieldTtm: null, aum: null, ytd: null, r1y: null, r3y: null, r5y: null, vol3y: null, dd3y: null, sharpe: null, erosion: "n/a", priceRet3y: null, capFunded: null, divCagr3y: null, divCagr5y: null, lastExDate: null, analystRec: null, analystCoverage: null, freq: "N/A" }} onClose={() => setSelectedTicker(null)} isCompared={selectedForCompare.some((row) => row.ticker === selectedTicker)} compareLimitReached={selectedForCompare.length >= 3 && !selectedForCompare.some((row) => row.ticker === selectedTicker)} onToggleCompare={toggleCompare} onOpenCompare={() => setCompareOpen(true)} />}
-      {compareOpen && selectedForCompare.length > 0 && <CompareModal rows={selectedForCompare} onClose={() => setCompareOpen(false)} />}
+      {selectedTicker && <LiveEtfDetailModal key={selectedTicker} row={data?.rows.find((row) => row.ticker === selectedTicker) ?? selectedForCompare.find((row) => row.ticker === selectedTicker) ?? availableRows.find((row) => row.ticker === selectedTicker) ?? { ticker: selectedTicker, name: null, category: null, family: null, leveraged: false, assetClass: "Other", rateTag: "neutral", rateLabel: "Rate context unavailable", quality: null, qualityScore: null, price: null, changePct: null, expense: null, yieldTtm: null, aum: null, ytd: null, r1y: null, r3y: null, r5y: null, vol3y: null, dd3y: null, sharpe: null, erosion: "n/a", priceRet3y: null, capFunded: null, divCagr3y: null, divCagr5y: null, lastExDate: null, analystRec: null, analystCoverage: null, freq: "N/A" }} onClose={() => setSelectedTicker(null)} isCompared={selectedForCompare.some((row) => row.ticker === selectedTicker)} compareLimitReached={selectedForCompare.length >= 3 && !selectedForCompare.some((row) => row.ticker === selectedTicker)} compareCount={selectedForCompare.length} onToggleCompare={toggleCompare} onOpenCompare={() => { setSelectedTicker(null); setCompareOpen(true); }} />}
     </div>
   );
 }
