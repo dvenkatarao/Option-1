@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { MainTabType, Navbar } from './components/layout/Navbar';
 import { MarketTickerBar } from './components/layout/MarketTickerBar';
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -17,11 +17,20 @@ import { ResearchAcademyView } from './components/research/ResearchAcademyView';
 import { LiveResearchHub } from './components/live/LiveResearchHub';
 import { LiveEtfScreenerView } from './components/live/LiveEtfScreenerView';
 import { LiveWheelView } from './components/live/LiveWheelView';
+import { LiveStockSearchPreview } from './components/live/LiveStockSearchPreview';
+import type { LiveStockSearchProfile } from './lib/live-stock-search';
 import { ETF_DATASET } from './data/etfData';
 import { IllustrativeDataNotice } from './components/common/IllustrativeDataNotice';
 import { WHEEL_STOCKS, ACTIVE_CAMPAIGNS } from './data/wheelData';
 import { ETFData, WheelStock, OptionContract, ActiveWheelCampaign } from './types';
-import { Zap } from 'lucide-react';
+import { RefreshCw, Zap } from 'lucide-react';
+
+type GlobalStockSearchResponse = {
+  query: string;
+  profiles: LiveStockSearchProfile[];
+  tickerLookup: { ticker: string; canHydrate: boolean } | null;
+};
+type SelectedLiveStock = { ticker: string; canHydrate: boolean };
 
 export function App() {
   const [activeTab, setActiveTab] = useState<MainTabType>('dashboard');
@@ -35,6 +44,11 @@ export function App() {
   // Modals & Sub-views
   const [selectedETF, setSelectedETF] = useState<ETFData | null>(null);
   const [selectedStockForChain, setSelectedStockForChain] = useState<WheelStock | null>(null);
+  const [selectedLiveStock, setSelectedLiveStock] = useState<SelectedLiveStock | null>(null);
+  const [requestedLiveDetailTicker, setRequestedLiveDetailTicker] = useState<string | null>(null);
+  const [liveStockSearch, setLiveStockSearch] = useState<GlobalStockSearchResponse>({ query: '', profiles: [], tickerLookup: null });
+  const [liveStockSearchLoading, setLiveStockSearchLoading] = useState(false);
+  const [liveStockSearchError, setLiveStockSearchError] = useState<string | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>(['VOO', 'SCHD', 'JEPI']);
   const [isCompareViewOpen, setIsCompareViewOpen] = useState(false);
 
@@ -77,24 +91,66 @@ export function App() {
     setActiveCampaigns((prev) => [camp, ...prev]);
   };
 
-  // Global Search results if user searches in top bar
+  // Global stock search uses hydrated provider-backed profiles, never the bundled WheelStock demo data.
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length === 0) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setLiveStockSearch({ query, profiles: [], tickerLookup: null });
+      setLiveStockSearchLoading(true);
+      setLiveStockSearchError(null);
+      void (async () => {
+        try {
+          const response = await fetch(`/api/wheel/search?q=${encodeURIComponent(query)}`, { cache: "no-store", signal: controller.signal });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : `Live stock search failed (${response.status})`);
+          if (!controller.signal.aborted) setLiveStockSearch(body as GlobalStockSearchResponse);
+        } catch (reason) {
+          if (!controller.signal.aborted) setLiveStockSearchError(reason instanceof Error ? reason.message : "Live stock search is unavailable");
+        } finally {
+          if (!controller.signal.aborted) setLiveStockSearchLoading(false);
+        }
+      })();
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery]);
+
+  // ETF global results remain separate from the live stock profile search.
   const globalSearchResults = useMemo(() => {
     if (!searchQuery.trim()) return null;
     const q = searchQuery.toLowerCase().trim();
-    const matchedETFs = etfs.filter(
-      (e) =>
+    return {
+      etfs: etfs.filter((e) =>
         e.symbol.toLowerCase().includes(q) ||
         e.name.toLowerCase().includes(q) ||
-        e.issuer.toLowerCase().includes(q)
-    );
-    const matchedStocks = wheelStocks.filter(
-      (s) =>
-        s.symbol.toLowerCase().includes(q) ||
-        s.name.toLowerCase().includes(q) ||
-        s.sector.toLowerCase().includes(q)
-    );
-    return { etfs: matchedETFs, stocks: matchedStocks };
-  }, [searchQuery, etfs, wheelStocks]);
+        e.issuer.toLowerCase().includes(q),
+      ),
+    };
+  }, [searchQuery, etfs]);
+
+  const liveStockSearchIsCurrent = liveStockSearch.query === searchQuery.trim();
+
+  const openLiveStockPreview = (ticker: string, canHydrate: boolean) => {
+    setSelectedLiveStock({ ticker, canHydrate });
+    setSearchQuery('');
+  };
+
+  const acknowledgeLiveDetailOpen = useCallback(() => setRequestedLiveDetailTicker(null), []);
+
+  const openLiveDetailWorkspace = (ticker: string) => {
+    setSelectedLiveStock(null);
+    setSearchQuery('');
+    setActiveTab('wheel');
+    setWheelSubTab('live');
+    setIsCompareViewOpen(false);
+    setRequestedLiveDetailTicker(ticker);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
@@ -120,75 +176,79 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {/* Global Search Overlay Dropdown if query entered */}
-        {globalSearchResults && (
-          <div className="mb-6 p-4 rounded-2xl bg-slate-900 border border-emerald-500/50 shadow-2xl space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="text-xs font-mono font-bold text-emerald-400">
-                Search Results for &quot;{searchQuery}&quot;
-              </span>
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-xs text-slate-400 hover:text-white"
-              >
-                Clear Search ✕
-              </button>
+        {/* Global search: ETF examples remain labeled; stock matches come from provider-backed profiles. */}
+        {searchQuery.trim() && (
+          <div role="region" aria-label="Global search results" className="mb-6 rounded-2xl border border-emerald-500/50 bg-slate-900 p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-800 pb-2">
+              <span className="text-xs font-mono font-bold text-emerald-400">Search Results for &quot;{searchQuery}&quot;</span>
+              <button type="button" onClick={() => setSearchQuery('')} className="text-xs text-slate-400 hover:text-white">Clear Search ✕</button>
             </div>
 
-            <IllustrativeDataNotice detail="Global ETF and wheel-stock search results use the bundled demonstration dataset; displayed prices, yields, and scores are not current quotes. Use the Live ETF Research or Live Provider Scanner views for source-backed market data." className="mb-3" />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* ETFs Matched */}
-              <div>
-                <span className="text-[11px] font-mono text-slate-400 block mb-1">
-                  ETFs ({globalSearchResults.etfs.length})
-                </span>
-                <div className="space-y-1">
-                  {globalSearchResults.etfs.slice(0, 4).map((e) => (
-                    <div
-                      key={e.symbol}
-                      onClick={() => {
-                        setSelectedETF(e);
-                        setSearchQuery('');
-                      }}
-                      className="cursor-pointer p-2 rounded-lg bg-slate-950 hover:bg-slate-800 flex items-center justify-between text-xs font-mono transition"
-                    >
-                      <span className="font-bold text-white">{e.symbol}</span>
-                      <span className="text-slate-400 font-sans truncate max-w-[140px]">{e.name}</span>
-                      <span className="text-emerald-400 font-bold">{e.dividendYield}% Yield</span>
-                    </div>
-                  ))}
-                  {globalSearchResults.etfs.length === 0 && (
-                    <span className="text-xs text-slate-500">No ETFs found</span>
-                  )}
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <section>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h2 className="text-[11px] font-mono font-semibold text-slate-300">ETF matches ({globalSearchResults?.etfs.length ?? 0})</h2>
                 </div>
-              </div>
-
-              {/* Wheel Stocks Matched */}
-              <div>
-                <span className="text-[11px] font-mono text-slate-400 block mb-1">
-                  Wheel Blue-Chips ({globalSearchResults.stocks.length})
-                </span>
-                <div className="space-y-1">
-                  {globalSearchResults.stocks.slice(0, 4).map((s) => (
-                    <div
-                      key={s.symbol}
-                      onClick={() => {
-                        setSelectedStockForChain(s);
-                        setSearchQuery('');
-                      }}
-                      className="cursor-pointer p-2 rounded-lg bg-slate-950 hover:bg-slate-800 flex items-center justify-between text-xs font-mono transition"
+                {(globalSearchResults?.etfs.length ?? 0) > 0 && (
+                  <IllustrativeDataNotice detail="These global ETF matches use bundled example profiles and are not current quotes or recommendations. Use Live ETF Research for provider-backed ETF data." className="mb-3" />
+                )}
+                <div className="space-y-1.5">
+                  {globalSearchResults?.etfs.slice(0, 4).map((etf) => (
+                    <button
+                      type="button"
+                      key={etf.symbol}
+                      onClick={() => { setSelectedETF(etf); setSearchQuery(''); }}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg bg-slate-950 p-2.5 text-left text-xs transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                     >
-                      <span className="font-bold text-white">{s.symbol}</span>
-                      <span className="text-slate-400 font-sans truncate max-w-[140px]">{s.name}</span>
-                      <span className="text-cyan-300 font-bold">Score {s.wheelSuitabilityScore}</span>
-                    </div>
+                      <span className="shrink-0 font-mono font-bold text-white">{etf.symbol}</span>
+                      <span className="min-w-0 flex-1 truncate text-slate-400">{etf.name}</span>
+                      <span className="shrink-0 font-mono text-emerald-400">{etf.dividendYield}% yield</span>
+                    </button>
                   ))}
-                  {globalSearchResults.stocks.length === 0 && (
-                    <span className="text-xs text-slate-500">No blue-chip stocks found</span>
-                  )}
+                  {(globalSearchResults?.etfs.length ?? 0) === 0 && <p className="rounded-lg border border-dashed border-slate-800 p-3 text-xs text-slate-500">No ETF matches.</p>}
                 </div>
-              </div>
+              </section>
+
+              <section>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <h2 className="text-[11px] font-mono font-semibold text-slate-300">Live stock profiles ({liveStockSearchIsCurrent ? liveStockSearch.profiles.length + (liveStockSearch.tickerLookup ? 1 : 0) : 0})</h2>
+                </div>
+                <p className="mb-3 text-[9px] leading-relaxed text-slate-500">Company-name matches come from hydrated provider-backed stock records. Opening a result loads quote data with source and freshness details.</p>
+                {liveStockSearchLoading || !liveStockSearchIsCurrent ? (
+                  <p className="inline-flex items-center gap-2 rounded-lg border border-slate-800 p-3 text-xs text-slate-400"><RefreshCw className="h-3.5 w-3.5 animate-spin text-cyan-300" />Searching live stock profiles…</p>
+                ) : liveStockSearchError ? (
+                  <p role="alert" className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-100">Live stock search unavailable: {liveStockSearchError}. No demo stock data is substituted.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {liveStockSearch.profiles.map((profile) => (
+                      <button
+                        type="button"
+                        key={profile.ticker}
+                        onClick={() => openLiveStockPreview(profile.ticker, false)}
+                        className="flex w-full items-center justify-between gap-3 rounded-lg bg-slate-950 p-2.5 text-left text-xs transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                      >
+                        <span className="shrink-0 font-mono font-bold text-white">{profile.ticker}</span>
+                        <span className="min-w-0 flex-1 truncate text-slate-300">{profile.name ?? "Company name unavailable"}<span className="ml-2 text-[10px] text-slate-500">{profile.sector ?? "Sector unavailable"}</span></span>
+                        <span className={`shrink-0 text-right text-[9px] ${profile.lastError ? "text-amber-300" : "text-slate-500"}`}>{profile.refreshedAt ? `${profile.lastError ? "Refresh failed" : "Profile refreshed"} ${new Date(profile.refreshedAt).toLocaleDateString()}` : "Profile date unavailable"}</span>
+                      </button>
+                    ))}
+                    {liveStockSearch.tickerLookup && (
+                      <button
+                        type="button"
+                        onClick={() => openLiveStockPreview(liveStockSearch.tickerLookup!.ticker, true)}
+                        className="flex w-full items-center justify-between gap-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-2.5 text-left text-xs transition hover:bg-cyan-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                      >
+                        <span className="shrink-0 font-mono font-bold text-cyan-200">{liveStockSearch.tickerLookup.ticker}</span>
+                        <span className="min-w-0 flex-1 text-slate-300">Ticker in configured live wheel universe<span className="ml-2 text-[10px] text-slate-500">Profile not hydrated yet</span></span>
+                        <span className="shrink-0 text-[10px] font-semibold text-cyan-200">Fetch profile</span>
+                      </button>
+                    )}
+                    {liveStockSearch.profiles.length === 0 && !liveStockSearch.tickerLookup && (
+                      <p className="rounded-lg border border-dashed border-slate-800 p-3 text-xs leading-relaxed text-slate-500">{searchQuery.trim().length < 2 ? "No exact live ticker match. Enter at least two characters to search company names." : "No live stock profile matched. Search a hydrated company name or a ticker in the configured wheel universe."}</p>
+                    )}
+                  </div>
+                )}
+              </section>
             </div>
           </div>
         )}
@@ -359,7 +419,12 @@ export function App() {
               />
             )}
 
-            {wheelSubTab === 'live' && <LiveWheelView />}
+            {wheelSubTab === 'live' && (
+              <LiveWheelView
+                initialDetailTicker={requestedLiveDetailTicker}
+                onInitialDetailTickerOpened={acknowledgeLiveDetailOpen}
+              />
+            )}
           </div>
         )}
 
@@ -415,7 +480,17 @@ export function App() {
         />
       )}
 
-      {/* Wheel Options Chain Matrix Modal */}
+      {selectedLiveStock && (
+        <LiveStockSearchPreview
+          key={selectedLiveStock.ticker}
+          ticker={selectedLiveStock.ticker}
+          canHydrate={selectedLiveStock.canHydrate}
+          onClose={() => setSelectedLiveStock(null)}
+          onOpenDetail={openLiveDetailWorkspace}
+        />
+      )}
+
+      {/* Sample-only Wheel Options Chain Matrix Modal remains available in the legacy sample scanner. */}
       {selectedStockForChain && (
         <WheelOptionChainModal
           stock={selectedStockForChain}
