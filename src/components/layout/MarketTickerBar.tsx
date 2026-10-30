@@ -59,7 +59,7 @@ export const MarketTickerBar = () => {
               {quote?.changePct != null ? <span className={`flex items-center text-[11px] font-mono font-medium px-1.5 py-0.5 rounded ${positive ? 'text-emerald-400 bg-emerald-950/60 border border-emerald-800/40' : 'text-rose-400 bg-rose-950/60 border border-rose-800/40'}`}>
                 {positive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
                 {quote.changePct > 0 ? '+' : ''}{quote.changePct.toFixed(2)}%
-              </span> : <span className="rounded bg-slate-950 px-1.5 py-0.5 text-[10px] text-slate-600">N/A</span>}
+              </span> : <span className="rounded bg-slate-950 px-1.5 py-0.5 text-[10px] text-slate-500">N/A</span>}
             </div>
           );
         })}

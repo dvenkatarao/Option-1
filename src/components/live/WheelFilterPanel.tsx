@@ -28,7 +28,7 @@ function NumberField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+    <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
       {label}
       <input
         type="number"
@@ -63,15 +63,15 @@ function RangeSelectField({
 
   return (
     <fieldset className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
-      <legend className="px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">{label}</legend>
+      <legend className="px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</legend>
       <div className="grid grid-cols-2 gap-2">
-        <label className="block text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Minimum
           <select value={minValue} onChange={(event) => onChange("min", event.target.value)} className={inputClass + " mt-1"}>
             {options.map((value) => <option key={value} value={String(value)} disabled={value > max}>{formatValue(value)}</option>)}
           </select>
         </label>
-        <label className="block text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Maximum
           <select value={maxValue} onChange={(event) => onChange("max", event.target.value)} className={inputClass + " mt-1"}>
             {options.map((value) => <option key={value} value={String(value)} disabled={value < min}>{formatValue(value)}</option>)}
@@ -139,43 +139,43 @@ export function WheelFilterPanel({
         </div>
         <div className="flex shrink-0 gap-2">
           <button type="button" onClick={onReset} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[10px] font-semibold text-slate-300 hover:text-white">Reset</button>
-          <button className="rounded-lg bg-cyan-600 px-3 py-2 text-[10px] font-bold text-slate-950 hover:bg-cyan-500">Apply filters</button>
+          <button className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500">Apply filters</button>
         </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Stock grade
           <select value={filterValues.grade} onChange={(event) => setFilterValues((current) => ({ ...current, grade: event.target.value, gradeMatch: event.target.value === "all" ? "minimum" : current.gradeMatch }))} className={inputClass + " mt-1"}>
             <option value="A+">A+</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="all">All saved graded scans</option>
           </select>
         </label>
-        <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Grade matching
           <select value={filterValues.gradeMatch} onChange={(event) => update("gradeMatch", event.target.value as WheelFilterState["gradeMatch"])} className={inputClass + " mt-1"}>
             <option value="minimum">This grade or higher</option><option value="exact" disabled={filterValues.grade === "all"}>Exact grade only</option>
           </select>
         </label>
-        <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Rank results by
           <select value={filterValues.sortBy} onChange={(event) => update("sortBy", event.target.value as WheelFilterState["sortBy"])} className={inputClass + " mt-1"}>
             <option value="score">Best overall score</option><option value="annRoc">Highest annualized ROC</option>
           </select>
         </label>
-        <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Account-fit hint
           <select value={filterValues.account} onChange={(event) => update("account", event.target.value)} className={inputClass + " mt-1"}>
             <option value="all">All</option><option value="R">Retirement · R</option><option value="T">Taxable · T</option>
           </select>
         </label>
-        <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Minimum open interest
           <input type="number" min="0" max="100000" step="1" value={filterValues.minOi} onChange={(event) => update("minOi", event.target.value)} className={inputClass + " mt-1"} />
         </label>
       </div>
 
       <div className="mt-4">
-        <div className="mb-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Provider-backed sector</div>
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Provider-backed sector</div>
         <div className="flex flex-wrap gap-1.5">
           {["all", ...sectorOptions].map((sector) => {
             const selected = filterValues.sector === sector;
@@ -191,7 +191,7 @@ export function WheelFilterPanel({
               </button>
             );
           })}
-          {sectorOptions.length === 0 && <span className="px-2 py-1 text-[10px] text-slate-600">Sector data will appear when stock fundamentals are hydrated.</span>}
+          {sectorOptions.length === 0 && <span className="px-2 py-1 text-[10px] text-slate-500">Sector data will appear when stock fundamentals are hydrated.</span>}
         </div>
       </div>
 
@@ -205,7 +205,7 @@ export function WheelFilterPanel({
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-950/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0">
             <span className="block text-[10px] font-bold text-slate-200">Range filters</span>
-            <span className="mt-0.5 block truncate text-[9px] text-slate-500 sm:whitespace-normal">
+            <span className="mt-0.5 block truncate text-[10px] text-slate-500 sm:whitespace-normal">
               DTE {summaryDteMin}–{summaryDteMax}d · |Δ| {summaryDeltaMin.toFixed(2)}–{summaryDeltaMax.toFixed(2)} · Cash cap {filterValues.maxCollateralEnabled ? `$${maxCollateral.toLocaleString("en-US")}` : "off"}
             </span>
           </span>
@@ -229,8 +229,8 @@ export function WheelFilterPanel({
             onChange={(handle, value) => updateRange("deltaMin", "deltaMax", handle, value)}
           />
           <fieldset className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/70 p-2">
-            <legend className="px-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Cash secured per contract</legend>
-            <label className="block text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+            <legend className="px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cash secured per contract</legend>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Maximum collateral
               <select
                 value={collateralSelection}
@@ -248,10 +248,10 @@ export function WheelFilterPanel({
                 {COLLATERAL_OPTIONS.map((value) => <option key={value} value={String(value)}>${(value / 1000).toLocaleString("en-US")}k</option>)}
               </select>
             </label>
-            <p className="mt-1.5 text-[8px] leading-relaxed text-slate-600">Applied per contract before ranking alternatives.</p>
+            <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">Applied per contract before ranking alternatives.</p>
           </fieldset>
         </div>
-        <p className="px-3 pb-2 text-[8px] text-slate-600">Choices match the stored option scans: 7–70 DTE and absolute put delta up to 0.50.</p>
+        <p className="px-3 pb-2 text-[10px] text-slate-500">Choices match the stored option scans: 7–70 DTE and absolute put delta up to 0.50.</p>
       </details>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -268,7 +268,7 @@ export function WheelFilterPanel({
           <span>Dividend stocks only</span>
         </label>
       </div>
-      <p className="mt-3 text-[9px] leading-relaxed text-slate-600">Live results use source-backed fields only. The legacy sample-only undervaluation and wide-moat toggles are intentionally not represented here.</p>
+      <p className="mt-3 text-[10px] leading-relaxed text-slate-500">Live results use source-backed fields only. The legacy sample-only undervaluation and wide-moat toggles are intentionally not represented here.</p>
     </form>
   );
 }

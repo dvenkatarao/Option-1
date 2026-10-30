@@ -417,7 +417,7 @@ export const WheelScannerView: React.FC<WheelScannerViewProps> = ({
               {filteredStocks.map((stock) => {
                 const bestPut = stock.optionChains[0]?.puts[1] || stock.optionChains[0]?.puts[0];
                 return (
-                  <tr key={stock.symbol} className="hover:bg-slate-850 transition group">
+                  <tr key={stock.symbol} className="hover:bg-slate-800 transition group">
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white group-hover:text-emerald-400">{stock.symbol}</span>

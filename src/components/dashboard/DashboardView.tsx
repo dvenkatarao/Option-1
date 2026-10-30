@@ -366,7 +366,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               return (
                 <div
                   key={g.row.ticker}
-                  className="bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-5 transition-all shadow-md group flex flex-col justify-between"
+                  className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-5 transition-all shadow-md group flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-3">
@@ -448,7 +448,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       Review in Live Scanner <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
-                  <p className="mt-2 text-[9px] leading-relaxed text-slate-600">
+                  <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
                     *Model-based probability proxy, not a measured win rate. Quotes may be delayed.
                   </p>
                 </div>

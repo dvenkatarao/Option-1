@@ -523,7 +523,7 @@ export const WheelSimulatorView: React.FC<WheelSimulatorViewProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-800 font-medium">
                 {multiCycleData.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-850 transition">
+                  <tr key={idx} className="hover:bg-slate-800 transition">
                     <td className="py-3 px-4 font-bold text-white">{row.cycle}</td>
                     <td className="py-3 px-4 text-slate-300 font-sans">{row.action}</td>
                     <td className="py-3 px-4 text-right font-bold text-emerald-400">

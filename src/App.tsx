@@ -213,7 +213,7 @@ export function App() {
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <h2 className="text-[11px] font-mono font-semibold text-slate-300">Live stock profiles ({liveStockSearchIsCurrent ? liveStockSearch.profiles.length + (liveStockSearch.tickerLookup ? 1 : 0) : 0})</h2>
                 </div>
-                <p className="mb-3 text-[9px] leading-relaxed text-slate-500">Company-name matches come from hydrated provider-backed stock records. Opening a result loads quote data with source and freshness details.</p>
+                <p className="mb-3 text-[10px] leading-relaxed text-slate-500">Company-name matches come from hydrated provider-backed stock records. Opening a result loads quote data with source and freshness details.</p>
                 {liveStockSearchLoading || !liveStockSearchIsCurrent ? (
                   <p className="inline-flex items-center gap-2 rounded-lg border border-slate-800 p-3 text-xs text-slate-400"><RefreshCw className="h-3.5 w-3.5 animate-spin text-cyan-300" />Searching live stock profiles…</p>
                 ) : liveStockSearchError ? (
@@ -229,7 +229,7 @@ export function App() {
                       >
                         <span className="shrink-0 font-mono font-bold text-white">{profile.ticker}</span>
                         <span className="min-w-0 flex-1 truncate text-slate-300">{profile.name ?? "Company name unavailable"}<span className="ml-2 text-[10px] text-slate-500">{profile.sector ?? "Sector unavailable"}</span></span>
-                        <span className={`shrink-0 text-right text-[9px] ${profile.lastError ? "text-amber-300" : "text-slate-500"}`}>{profile.refreshedAt ? `${profile.lastError ? "Refresh failed" : "Profile refreshed"} ${new Date(profile.refreshedAt).toLocaleDateString()}` : "Profile date unavailable"}</span>
+                        <span className={`shrink-0 text-right text-[10px] ${profile.lastError ? "text-amber-300" : "text-slate-500"}`}>{profile.refreshedAt ? `${profile.lastError ? "Refresh failed" : "Profile refreshed"} ${new Date(profile.refreshedAt).toLocaleDateString()}` : "Profile date unavailable"}</span>
                       </button>
                     ))}
                     {liveStockSearch.tickerLookup && (
@@ -507,7 +507,7 @@ export function App() {
               W
             </div>
             <span className="font-bold text-slate-300">WheelCore Intelligence Terminal</span>
-            <span className="text-slate-600">|</span>
+            <span className="text-slate-500">|</span>
             <span>US Markets ETF & Options Wheel Portfolio Builder</span>
           </div>
 
@@ -520,7 +520,7 @@ export function App() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto mt-4 pt-4 border-t border-slate-900 text-[10px] text-slate-600 text-center leading-relaxed">
+        <div className="max-w-7xl mx-auto mt-4 pt-4 border-t border-slate-900 text-[10px] text-slate-500 text-center leading-relaxed">
           Disclaimer: WheelCore is an educational portfolio research and screening interface. Options trading and leveraged exchange-traded products carry significant financial risk. Always verify liquidity, ex-dividend dates, and NAV erosion risk profiles prior to executing real-money capital allocations.
         </div>
       </footer>

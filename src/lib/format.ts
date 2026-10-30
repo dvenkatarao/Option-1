@@ -45,7 +45,7 @@ export function colorFor(x: N): string {
   if (x == null || !Number.isFinite(x)) return "text-slate-400";
   if (x > 0) return "text-emerald-600";
   if (x < 0) return "text-rose-600";
-  return "text-slate-600";
+  return "text-slate-500";
 }
 
 export function dateShort(iso: string | null | undefined): string {
