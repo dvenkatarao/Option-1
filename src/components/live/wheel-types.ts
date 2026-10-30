@@ -45,6 +45,8 @@ export type LiveWheelRow = {
   count: number;
   source: string | null;
   fallbackReason: string | null;
+  isDelayed: boolean | null;
+  providerStale: boolean | null;
   scannedAt: string;
   stale: boolean;
 };

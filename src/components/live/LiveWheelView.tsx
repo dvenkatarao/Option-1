@@ -4,12 +4,13 @@ import { LiveWheelDetailView } from "./LiveWheelDetailView";
 import { LiveWheelChainModal } from "./LiveWheelChainModal";
 import { WheelCandidateResults } from "./WheelCandidateResults";
 import { WheelFilterPanel } from "./WheelFilterPanel";
+import { SchwabMarketDataControl } from "./SchwabMarketDataControl";
 import { DEFAULT_WHEEL_FILTERS, DEFAULT_WHEEL_FILTER_QUERY, serializeWheelFilterState, type WheelFilterState } from "./wheel-filter-state";
 import type { LiveWheelResults } from "./wheel-types";
 import type { OptionContract } from "../../lib/wheel";
 
 type WheelPosition = { id: string; ticker: string; side: "put_sold" | "assigned" | "call_sold" | "closed"; strike: number; expiration: string; premium: number; quantity: number; openedAt: string; closedAt: string | null; costBasis: number | null; notes: string | null; createdAt: string };
-type Chain = { symbol: string; price: number; nextEarnings: string | null; source: string; fetchedAt: string | null; stale: boolean; fallbackReasons?: string[]; contracts: OptionContract[] };
+type Chain = { symbol: string; price: number; nextEarnings: string | null; source: string; fetchedAt: string | null; stale: boolean; isDelayed?: boolean | null; fallbackReasons?: string[]; contracts: OptionContract[] };
 const cash = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "N/A" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const pct = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "N/A" : `${(value * 100).toFixed(1)}%`;
 const inputClass = "w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500/60";
@@ -210,6 +211,7 @@ export function LiveWheelView({
           <button onClick={() => void runBatch("scan")} disabled={action !== null} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${action === "scan" ? "animate-spin" : ""}`} />{action === "scan" ? "Scanning…" : "Scan 8 chains"}</button>
         </div>
       </header>
+      <SchwabMarketDataControl />
       <section className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/25 p-5 shadow-xl">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[{ label: "Universe stocks", value: results ? `${results.info.universe}` : "—" }, { label: "Stocks with chain scans", value: results ? `${results.info.scanned}` : "—" }, { label: "Waiting on data", value: results ? `${results.info.waiting}` : "—" }, { label: "Qualified put candidates", value: results ? `${results.rows.length}` : "—" }].map((item) => <div key={item.label} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{item.label}</div><div className="mt-1 font-mono text-lg font-bold text-slate-100">{item.value}</div></div>)}</div>
       </section>

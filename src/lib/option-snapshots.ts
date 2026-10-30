@@ -15,9 +15,10 @@ export function providerQuoteIsFresh(providerTimestamp: string | null | undefine
   return age >= -60_000 && age <= 20 * 60_000;
 }
 
-export function snapshotSkipReason(fetchedAt: Date, stale: boolean, now = new Date(), marketState?: string | null): string | null {
+export function snapshotSkipReason(fetchedAt: Date, stale: boolean, now = new Date(), marketState?: string | null, isDelayed?: boolean | null): string | null {
   if (stale) return "stale provider response";
   if (marketState != null && marketState !== "REGULAR") return `underlying market state is ${marketState}`;
+  if (isDelayed === true) return "provider flagged delayed quotes";
   if (!Number.isFinite(fetchedAt.getTime())) return "missing fetch timestamp";
   if (!isUsMarketHours(fetchedAt)) return "outside regular US market hours";
   const age = now.getTime() - fetchedAt.getTime();
@@ -37,9 +38,10 @@ export async function recordOptionQuoteSnapshots(input: {
   fetchedAt: string | Date;
   stale?: boolean;
   marketState?: string | null;
+  isDelayed?: boolean | null;
 }): Promise<SnapshotResult> {
   const fetchedAt = input.fetchedAt instanceof Date ? input.fetchedAt : new Date(input.fetchedAt);
-  const skipped = snapshotSkipReason(fetchedAt, !!input.stale, new Date(), input.marketState);
+  const skipped = snapshotSkipReason(fetchedAt, !!input.stale, new Date(), input.marketState, input.isDelayed);
   if (skipped) return { stored: 0, skipped };
 
   const bucket = bucketStart(fetchedAt, 15);

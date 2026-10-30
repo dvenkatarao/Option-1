@@ -1,14 +1,14 @@
 /**
- * Option-chain providers with automatic failover: Alpaca (primary, when keys are set) -> Yahoo (backup).
- * Alpaca supplies bid/ask, greeks and implied volatility (snapshots) plus open interest (trading API contracts).
- * Yahoo supplies bid/ask, implied volatility and open interest; delta is modelled with Black-Scholes.
+ * Read-only option-chain providers: connected Schwab Market Data -> configured Alpaca -> Yahoo in auto mode.
+ * Provider-specific payloads are normalized in options-parse.ts; quote freshness and source remain visible to callers.
  */
 import { getEnv } from "./env";
 import { cached } from "./cache";
 import { getRiskFree } from "./data";
 import { fetchJson } from "./http";
 import { crumbFetch } from "./yahoo";
-import { addModelDeltas, parseAlpaca, parseYahooResult, runProviders, type ChainResult } from "./options-parse";
+import { addModelDeltas, parseAlpaca, parseSchwabChain, parseYahooResult, runProviders, type ChainResult } from "./options-parse";
+import { getSchwabAccessToken, hasStoredSchwabConnection, schwabMarketDataConfigured } from "./schwab-auth";
 import type { OptionContract, OptionType } from "./wheel";
 
 export type ChainRequest = { symbol: string; type: OptionType; price: number; dteMin: number; dteMax: number; divYield?: number };
@@ -64,7 +64,35 @@ async function alpacaChain(req: ChainRequest): Promise<OptionContract[]> {
   return parseAlpaca(snapshots, contracts);
 }
 
-async function yahooChain(req: ChainRequest): Promise<OptionContract[]> {
+async function schwabChain(req: ChainRequest): Promise<{ contracts: OptionContract[]; underlyingPrice: number | null; isDelayed: boolean | null }> {
+  const token = await getSchwabAccessToken();
+  const params = new URLSearchParams({
+    symbol: req.symbol,
+    contractType: req.type === "put" ? "PUT" : "CALL",
+    fromDate: isoDay(req.dteMin),
+    toDate: isoDay(req.dteMax),
+    range: "ALL",
+    strategy: "SINGLE",
+    includeUnderlyingQuote: "true",
+  });
+  const payload = await fetchJson<unknown>(`https://api.schwabapi.com/marketdata/v1/chains?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    retries: 1,
+    timeoutMs: 20_000,
+  });
+  const parsed = parseSchwabChain(payload, req.type);
+  const spot = parsed.underlyingPrice ?? req.price;
+  const [lo, hi] = spot > 0 ? strikeWindow(req.type, spot) : [0, Number.POSITIVE_INFINITY];
+  const from = isoDay(req.dteMin);
+  const to = isoDay(req.dteMax);
+  return {
+    contracts: parsed.contracts.filter((contract) => contract.strike >= lo && contract.strike <= hi && contract.expiration >= from && contract.expiration <= to),
+    underlyingPrice: parsed.underlyingPrice,
+    isDelayed: parsed.isDelayed,
+  };
+}
+
+async function yahooChain(req: ChainRequest): Promise<{ contracts: OptionContract[]; underlyingPrice: number | null; isDelayed: null }> {
   const url = (crumb: string, date?: number) =>
     `https://query1.finance.yahoo.com/v7/finance/options/${encodeURIComponent(req.symbol)}?${date ? `date=${date}&` : ""}crumb=${encodeURIComponent(crumb)}`;
   const first = parseYahooResult(JSON.parse(await crumbFetch((c) => url(c))), req.type);
@@ -79,8 +107,13 @@ async function yahooChain(req: ChainRequest): Promise<OptionContract[]> {
     const r = parseYahooResult(JSON.parse(await crumbFetch((c) => url(c, exp))), req.type);
     all.push(...r.contracts);
   }
-  const [lo, hi] = strikeWindow(req.type, req.price);
-  return all.filter((c) => c.strike >= lo && c.strike <= hi && c.expiration >= isoDay(req.dteMin) && c.expiration <= isoDay(req.dteMax));
+  const spot = first.price ?? req.price;
+  const [lo, hi] = strikeWindow(req.type, spot);
+  return {
+    contracts: all.filter((c) => c.strike >= lo && c.strike <= hi && c.expiration >= isoDay(req.dteMin) && c.expiration <= isoDay(req.dteMax)),
+    underlyingPrice: first.price,
+    isDelayed: null,
+  };
 }
 
 async function riskFreeRate(): Promise<number> {
@@ -90,21 +123,40 @@ async function riskFreeRate(): Promise<number> {
   return rf.rate ?? 0.04; // last-resort assumption; only used to model delta when the feed has none
 }
 
-/** Fetch one side of the chain for a symbol, Alpaca first and Yahoo as backup (or per OPTIONS_PROVIDER). */
+/** Fetch one side of a chain: connected Schwab → Alpaca → Yahoo in auto mode. */
 export async function fetchOptionChain(req: ChainRequest): Promise<ChainResult> {
   const e = getEnv();
   const providers: Parameters<typeof runProviders>[0] = [];
-  if (e.OPTIONS_PROVIDER !== "yahoo") {
+  const unavailable: string[] = [];
+
+  if (e.OPTIONS_PROVIDER === "schwab") {
+    providers.push({ name: "schwab", fn: () => schwabChain(req) });
+  } else if (e.OPTIONS_PROVIDER === "auto") {
+    if (schwabMarketDataConfigured()) {
+      if (await hasStoredSchwabConnection()) providers.push({ name: "schwab", fn: () => schwabChain(req) });
+      else unavailable.push("Schwab is not connected");
+    }
     if (alpacaConfigured()) providers.push({ name: "alpaca", fn: () => alpacaChain(req) });
-    else if (e.OPTIONS_PROVIDER === "alpaca") providers.push({ name: "alpaca", fn: async () => { throw new Error("ALPACA_API_KEY / ALPACA_SECRET_KEY are not set"); } });
+    else unavailable.push("Alpaca keys are not configured");
+    providers.push({ name: "yahoo", fn: () => yahooChain(req) });
+  } else if (e.OPTIONS_PROVIDER === "alpaca") {
+    if (alpacaConfigured()) providers.push({ name: "alpaca", fn: () => alpacaChain(req) });
+    else providers.push({ name: "alpaca", fn: async () => { throw new Error("ALPACA_API_KEY / ALPACA_SECRET_KEY are not set"); } });
+  } else {
+    providers.push({ name: "yahoo", fn: () => yahooChain(req) });
   }
-  if (e.OPTIONS_PROVIDER !== "alpaca") providers.push({ name: "yahoo", fn: () => yahooChain(req) });
-  if (e.OPTIONS_PROVIDER === "auto" && !alpacaConfigured()) {
-    // make the missing-key case visible in the status line instead of silently using Yahoo
-    const r = await runProviders(providers);
-    return { ...r, fallbackReason: r.fallbackReason ?? "Alpaca keys not configured" };
+
+  const result = await runProviders(providers);
+  if (unavailable.length) {
+    return { ...result, fallbackReason: [unavailable.join("; "), result.fallbackReason].filter(Boolean).join("; ") };
   }
-  return runProviders(providers);
+  return result;
+}
+
+/** Force a direct Schwab market-data request for the authenticated connection's first-chain check. */
+export async function testSchwabOptionChain(symbol: string) {
+  const data = await schwabChain({ symbol, type: "put", price: 0, dteMin: 0, dteMax: 60 });
+  return { ...data, source: "schwab" as const, fetchedAt: new Date().toISOString() };
 }
 
 /** Cached chain with model deltas filled in where the feed gave none. */
@@ -114,6 +166,7 @@ export async function getOptionChain(req: ChainRequest, ttlSec = 120) {
   const c = await cached(key, ttlSec, () => fetchOptionChain(req));
   const rate = await riskFreeRate();
   const today = new Date().toISOString().slice(0, 10);
-  const contracts = addModelDeltas(c.data.contracts, req.price, rate, today, req.divYield ?? 0);
-  return { ...c.data, contracts, rate, fetchedAt: c.fetchedAt, stale: c.stale };
+  const underlyingPrice = c.data.underlyingPrice != null && c.data.underlyingPrice > 0 ? c.data.underlyingPrice : req.price;
+  const contracts = addModelDeltas(c.data.contracts, underlyingPrice, rate, today, req.divYield ?? 0);
+  return { ...c.data, underlyingPrice, contracts, rate, fetchedAt: c.fetchedAt, stale: c.stale };
 }

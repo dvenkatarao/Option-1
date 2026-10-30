@@ -55,6 +55,13 @@ export const cacheEntries = pgTable("cache_entries", {
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Encrypted, server-side OAuth credentials for market-data providers (never returned to the client). */
+export const marketDataConnections = pgTable("market_data_connections", {
+  provider: text("provider").primaryKey(),
+  encryptedTokens: text("encrypted_tokens").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /**
  * Quote samples taken during regular US market hours (one per ticker per 30-minute bucket).
  * Builds the history needed to measure real bid-ask spreads for the fund quality grade.
@@ -265,6 +272,8 @@ export const wheelScans = pgTable("wheel_scans", {
   scannedAt: timestamp("scanned_at", { withTimezone: true }).notNull(),
   source: text("source"),
   fallbackReason: text("fallback_reason"),
+  isDelayed: boolean("is_delayed"),
+  providerStale: boolean("provider_stale"),
   price: doublePrecision("price"),
   contracts: jsonb("contracts").$type<OptionContract[]>(),
   error: text("error"),

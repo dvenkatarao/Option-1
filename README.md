@@ -17,8 +17,8 @@ The demo and provider-backed views are labeled separately. Data endpoints do not
 - ETF history, distributions, profiles, holdings, screen metrics and cached quote data use the included Yahoo Finance adapters (unofficial/delayed endpoints).
 - Macro observations and calendars use FRED, the New York Fed, the Federal Reserve and BLS. A FRED API key is optional for the keyless series used by the macro panel.
 - News and regulatory events use government/SEC feeds; Finnhub's upcoming-earnings calendar is optional.
-- Options chains prefer Alpaca when configured and fall back to Yahoo Finance. The wheel screen applies deterministic liquidity, delta, spread, DTE, earnings and return filters; it is for research only and never routes orders.
-- PostgreSQL/Drizzle stores market-data cache, ETF history/profiles, stock fundamentals and technicals, wheel scans/IV snapshots, portfolios, holdings, transactions and saved wheel positions.
+- Options chains use a connected Schwab Market Data app first in `auto` mode, then Alpaca when configured, then Yahoo Finance. Schwab access is strictly market-data-only here: no account sync or order routing. The wheel screen applies deterministic liquidity, delta, spread, DTE, earnings and return filters; it is for research only and never routes orders.
+- PostgreSQL/Drizzle stores market-data cache, encrypted provider OAuth tokens, ETF history/profiles, stock fundamentals and technicals, wheel scans/IV/quote snapshots, portfolios, holdings, transactions and saved wheel positions.
 - **Research → Live Research & Sources** includes a guided ETF starter allocation, stored-data similarity groups (5-year adjusted-return correlation ≥0.95 or reported top-holdings overlap ≥50%), and transparent rankings. Similarity overlap is a lower bound because provider holdings lists are partial. ETF detail adds deterministic 50/200-day trend context and RSI14 from stored split-adjusted closes; these are descriptive, not forecasts.
 - Holdings-weighted analyst consensus is opt-in (`/api/recommend?analyst=1`), contributes 10% only when recommendation data covers at least 50% of a fund's reported top-holdings weight, and returns coverage alongside rankings. Missing analyst values are never imputed.
 - Source catalog and field-population reports are available under **Research → Live Research & Sources**. The machine-readable coverage endpoint is `/api/coverage`; the provider spec is `/api/spec`.
@@ -56,13 +56,21 @@ See [`.env.example`](.env.example) and [`DEPLOYMENT.md`](DEPLOYMENT.md). Key set
 - `APP_USERNAME` / `APP_PASSWORD` — one shared HTTP Basic credential for single-owner use; every holder can access the same portfolios and transactions.
 - `PORTFOLIO_ENCRYPTION_KEY` — at least 32 random characters; changing it invalidates previously encrypted credentials.
 - `SEC_USER_AGENT` — descriptive application name and a real contact email for SEC EDGAR.
-- `ALPACA_API_KEY` / `ALPACA_SECRET_KEY`, `OPTIONS_PROVIDER`, `ALPACA_OPTIONS_FEED` — options-chain provider configuration.
+- `SCHWAB_CLIENT_ID`, `SCHWAB_CLIENT_SECRET`, `SCHWAB_REDIRECT_URI` — Schwab Market Data OAuth app; keep all values server-side. `OPTIONS_PROVIDER=auto` uses Schwab only after authorization, then Alpaca, then Yahoo.
+- `ALPACA_API_KEY` / `ALPACA_SECRET_KEY`, `OPTIONS_PROVIDER`, `ALPACA_OPTIONS_FEED` — alternate options-chain provider configuration.
 - `WHEEL_SCANNER`, `WHEEL_EXTRA_SYMBOLS`, `QUOTE_SNAPSHOTS` — background refresh/snapshot behavior.
 - `FRED_API_KEY`, `FINNHUB_API_KEY` — optional enhanced source access.
 - `NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS` — defaults to `false`, showing Live ETF Research without the bundled sample screener/comparison tabs. Set to `true` to reveal them; restart `next dev` locally or rebuild/redeploy production. This is a public UI flag, not a secret.
 - `NEXT_PUBLIC_ENABLE_SAMPLE_WHEEL_SCREENS` — defaults to `false`, hiding the bundled Wheel Opportunity Scanner and placing Live Provider Scanner & Journal first. Set to `true` to show the sample scanner; restart `next dev` locally or rebuild/redeploy production. This is a public UI flag, not a secret.
 
-Live SnapTrade/Plaid broker connections are not implemented; the API returns an explicit not-supported response. Use CSV imports or manual ledger entries for real positions. Sample/demo portfolios are explicitly labeled.
+### Schwab Market Data setup
+
+1. Set `SCHWAB_CLIENT_ID`, `SCHWAB_CLIENT_SECRET`, `SCHWAB_REDIRECT_URI`, and a strong `PORTFOLIO_ENCRYPTION_KEY` in the server environment. Never put the client secret or tokens in browser code, a checked-in `.env`, or chat.
+2. Register a callback URL ending in `/api/v1/auth/callback` in the Schwab Developer Portal. `SCHWAB_REDIRECT_URI` must match the registered URL exactly, including scheme, hostname, and port. The loopback callback shown in the supplied portal screenshot works only if the browser can return to a service or reverse proxy listening on that exact host and port; the default Next.js dev server uses port 3000.
+3. Open the Wheel Strategy Lab, choose **Connect**, and authorize the app. The UI can remove the locally stored connection (it does not revoke authorization at Schwab) or directly test a read-only SPY put chain. OAuth tokens are encrypted in PostgreSQL with `PORTFOLIO_ENCRYPTION_KEY`; a process/database lock serializes token refreshes. The app uses token expiry values returned by Schwab rather than assuming a fixed refresh-token lifetime; when refresh expires or is rejected, the user must authorize again.
+4. In `auto` mode the connected Schwab chain is tried before Alpaca and Yahoo. A chain response's `isDelayed` flag and per-contract quote timestamps are shown when present. “Not marked delayed” is not proof that a user's entitlement is real-time. The parser currently interprets Schwab option `volatility` values as percentage points (for example, 31.5 becomes 31.5%); confirm IV against the first live chain response before relying on IV-based decisions, because this checkout has no Schwab credentials and has not made a live request.
+
+This integration is read-only market data. It does not read account balances/positions, request account or trading OAuth scopes, or submit orders. Live SnapTrade/Plaid broker connections are not implemented; the API returns an explicit not-supported response. Use CSV imports or manual ledger entries for real positions. Sample/demo portfolios are explicitly labeled.
 
 ## Quality checks
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addModelDeltas, hasUsableQuotes, parseAlpaca, parseOcc, parseYahooResult, runProviders } from "../src/lib/options-parse";
+import { addModelDeltas, hasUsableQuotes, parseAlpaca, parseOcc, parseSchwabChain, parseYahooResult, runProviders } from "../src/lib/options-parse";
 import type { OptionContract } from "../src/lib/wheel";
 
 describe("parseOcc", () => {
@@ -61,6 +61,66 @@ describe("parseYahooResult", () => {
   });
 });
 
+describe("parseSchwabChain", () => {
+  const payload = {
+    status: "SUCCESS",
+    isDelayed: true,
+    underlyingPrice: 211.5,
+    putExpDateMap: {
+      "2026-11-20:21": {
+        "200.0": [{
+          putCall: "PUT",
+          symbol: "AAPL  261120P00200000",
+          expirationDate: "2026-11-20T00:00:00",
+          strikePrice: 200,
+          bid: 2.05,
+          ask: 2.2,
+          last: 2.1,
+          volatility: 31.5,
+          delta: -0.22,
+          gamma: 0.02,
+          theta: -0.04,
+          vega: 0.09,
+          rho: -0.01,
+          openInterest: 900,
+          totalVolume: 41,
+          quoteTimeInLong: 1790000000000,
+        }],
+      },
+    },
+    callExpDateMap: {},
+  };
+
+  it("normalizes Schwab expiration maps and provider Greeks into the shared contract model", () => {
+    const parsed = parseSchwabChain(payload, "put");
+    expect(parsed.underlyingPrice).toBe(211.5);
+    expect(parsed.isDelayed).toBe(true);
+    expect(parsed.contracts).toHaveLength(1);
+    expect(parsed.contracts[0]).toMatchObject({
+      symbol: "AAPL261120P00200000",
+      type: "put",
+      strike: 200,
+      expiration: "2026-11-20",
+      bid: 2.05,
+      ask: 2.2,
+      iv: 0.315,
+      delta: -0.22,
+      deltaSource: "provider",
+      greeksSource: "provider",
+      oi: 900,
+      volume: 41,
+      source: "schwab",
+    });
+    expect(parsed.contracts[0].quoteTimestamp).toBe(new Date(1790000000000).toISOString());
+    expect(parseOcc(parsed.contracts[0].symbol)).toMatchObject({ underlying: "AAPL", expiration: "2026-11-20", type: "put", strike: 200 });
+  });
+
+  it("rejects provider error status and ignores contracts for the other side", () => {
+    expect(() => parseSchwabChain({ status: "FAILED" }, "put")).toThrow(/status FAILED/);
+    expect(parseSchwabChain({ callExpDateMap: { "2026-11-20:21": { "210": [{ putCall: "CALL", symbol: "AAPL-call", strikePrice: 210 }] } } }, "put").contracts).toEqual([]);
+  });
+});
+
 describe("addModelDeltas", () => {
   const base: OptionContract = { symbol: "X", type: "put", strike: 190, expiration: "2026-11-20", bid: 1, ask: 1.1, last: 1, delta: null, deltaSource: null, iv: 0.28, oi: 500, volume: 1, source: "yahoo" };
   it("models delta where missing, never overwrites provider deltas, skips contracts without IV", () => {
@@ -86,6 +146,13 @@ describe("failover", () => {
     const r = await runProviders([{ name: "alpaca", fn: async () => [{ ...good, source: "alpaca" }] }, { name: "yahoo", fn: async () => [good] }]);
     expect(r.source).toBe("alpaca");
     expect(r.fallbackReason).toBeNull();
+  });
+  it("preserves provider underlying price and delay metadata", async () => {
+    const r = await runProviders([{
+      name: "schwab",
+      fn: async () => ({ contracts: [{ ...good, source: "schwab" }], underlyingPrice: 211.5, isDelayed: true }),
+    }]);
+    expect(r).toMatchObject({ source: "schwab", underlyingPrice: 211.5, isDelayed: true });
   });
   it("falls back to Yahoo and records why when Alpaca throws, is empty, or has no quotes", async () => {
     for (const bad of [async () => { throw new Error("HTTP 403"); }, async () => [], async () => [{ ...good, bid: null, ask: null }]]) {

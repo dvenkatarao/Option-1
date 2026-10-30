@@ -1,0 +1,1 @@
+ALTER TABLE "wheel_scans" ADD COLUMN "provider_stale" boolean;

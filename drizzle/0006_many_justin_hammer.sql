@@ -1,0 +1,1 @@
+ALTER TABLE "wheel_scans" ADD COLUMN "is_delayed" boolean;

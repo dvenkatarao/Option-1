@@ -56,11 +56,12 @@ async function scanOne(g: GradedStock, price: number | null, marketState?: strin
   try {
     if (p == null) throw new Error("no price");
     const r = await getOptionChain({ symbol: ticker, type: "put", price: p, dteMin: SCAN_DTE_MIN, dteMax: SCAN_DTE_MAX, divYield: g.row.events?.dividendYield ?? 0 });
-    await recordOptionQuoteSnapshots({ ticker, underlyingPrice: p, contracts: r.contracts.slice(0, 120), fetchedAt: r.fetchedAt, stale: r.stale, marketState }).catch((e) => {
+    const scanPrice = r.underlyingPrice ?? p;
+    await recordOptionQuoteSnapshots({ ticker, underlyingPrice: scanPrice, contracts: r.contracts.slice(0, 120), fetchedAt: r.fetchedAt, stale: r.stale, marketState, isDelayed: r.isDelayed }).catch((e) => {
       console.warn("[options] background quote snapshot skipped:", e instanceof Error ? e.message : e);
     });
     const contracts = r.contracts.filter((c) => c.delta != null && Math.abs(c.delta) <= 0.5 && (c.bid ?? 0) > 0);
-    const row = { ticker, scannedAt: new Date(), source: r.source, fallbackReason: r.fallbackReason, price: p, contracts, error: null };
+    const row = { ticker, scannedAt: new Date(), source: r.source, fallbackReason: r.fallbackReason, isDelayed: r.isDelayed ?? null, providerStale: r.stale, price: scanPrice, contracts, error: null };
     await db.insert(wheelScans).values(row).onConflictDoUpdate({ target: wheelScans.ticker, set: row });
     // Sprint C: persist IV snapshot for rank (best-effort, non-blocking)
     try {
@@ -86,7 +87,7 @@ async function scanOne(g: GradedStock, price: number | null, marketState?: strin
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
     // Clear old contracts on failure: showing stale quotes as current would be misleading. Retried after the TTL.
-    const row = { ticker, scannedAt: new Date(), source: null, fallbackReason: null, price: p, contracts: null, error };
+    const row = { ticker, scannedAt: new Date(), source: null, fallbackReason: null, isDelayed: null, providerStale: null, price: p, contracts: null, error };
     await db.insert(wheelScans).values(row).onConflictDoUpdate({ target: wheelScans.ticker, set: row });
     return { ticker, ok: false as const, error };
   }
@@ -218,6 +219,8 @@ export type WheelRow = {
   count: number;
   source: string | null;
   fallbackReason: string | null;
+  isDelayed: boolean | null;
+  providerStale: boolean | null;
   scannedAt: Date;
   stale: boolean;
 };
@@ -318,7 +321,7 @@ export async function getWheelResults(f: WheelFilters = DEFAULT_FILTERS, today =
       }
       continue;
     }
-    rows.push({ g, ctx, best: cands[0], count: cands.length, source: s.source, fallbackReason: s.fallbackReason, scannedAt: s.scannedAt, stale: scanIsStale(s.scannedAt) });
+    rows.push({ g, ctx, best: cands[0], count: cands.length, source: s.source, fallbackReason: s.fallbackReason, isDelayed: s.isDelayed, providerStale: s.providerStale, scannedAt: s.scannedAt, stale: scanIsStale(s.scannedAt) || s.providerStale === true });
   }
   rows.sort((a, b) => comparePutCandidates(a.best, b.best, f.sortBy));
   earningsWatch.sort((a, b) => a.days - b.days);
