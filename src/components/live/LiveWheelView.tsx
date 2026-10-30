@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Activity, AlertTriangle, CalendarClock, CheckCircle2, CircleHelp, Database, Plus, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
 import { LiveWheelDetailView } from "./LiveWheelDetailView";
+import { LiveWheelChainModal } from "./LiveWheelChainModal";
 import { WheelCandidateResults } from "./WheelCandidateResults";
 import { WheelFilterPanel } from "./WheelFilterPanel";
 import { DEFAULT_WHEEL_FILTERS, DEFAULT_WHEEL_FILTER_QUERY, serializeWheelFilterState, type WheelFilterState } from "./wheel-filter-state";
@@ -8,7 +9,7 @@ import type { LiveWheelResults } from "./wheel-types";
 import type { OptionContract } from "../../lib/wheel";
 
 type WheelPosition = { id: string; ticker: string; side: "put_sold" | "assigned" | "call_sold" | "closed"; strike: number; expiration: string; premium: number; quantity: number; openedAt: string; closedAt: string | null; costBasis: number | null; notes: string | null; createdAt: string };
-type Chain = { symbol: string; price: number; nextEarnings: string | null; source: string; fetchedAt: string | null; stale: boolean; contracts: { type: "put" | "call"; strike: number; expiration: string; bid: number | null; ask: number | null; iv: number | null; delta: number | null; oi: number | null }[] };
+type Chain = { symbol: string; price: number; nextEarnings: string | null; source: string; fetchedAt: string | null; stale: boolean; fallbackReasons?: string[]; contracts: OptionContract[] };
 const cash = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "N/A" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const pct = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "N/A" : `${(value * 100).toFixed(1)}%`;
 const inputClass = "w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500/60";
@@ -28,6 +29,8 @@ export function LiveWheelView() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [chain, setChain] = useState<Chain | null>(null);
   const [chainTicker, setChainTicker] = useState<string | null>(null);
+  const [chainModalTicker, setChainModalTicker] = useState<string | null>(null);
+  const [chainError, setChainError] = useState<string | null>(null);
   const [detailTicker, setDetailTicker] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<"refresh" | "scan" | null>(null);
@@ -70,16 +73,29 @@ export function LiveWheelView() {
   const loadChain = async (ticker: string) => {
     const requestId = chainRequestIdRef.current + 1;
     chainRequestIdRef.current = requestId;
-    setChainTicker(ticker); setChain(null); setError(null);
+    setChainModalTicker(ticker);
+    setChainTicker(ticker);
+    setChain(null);
+    setChainError(null);
+    setError(null);
     try {
       const snapshot = await requestJson<Chain>(`/api/wheel/chain?symbol=${encodeURIComponent(ticker)}&type=both&dteMin=7&dteMax=70`);
       if (chainRequestIdRef.current === requestId) setChain(snapshot);
     } catch (e) {
-      if (chainRequestIdRef.current === requestId) setError(e instanceof Error ? e.message : "Option chain could not be loaded");
+      if (chainRequestIdRef.current === requestId) setChainError(e instanceof Error ? e.message : "Option chain could not be loaded");
     } finally {
       // Clear only this request's loading state; a newer ticker may still be loading.
       if (chainRequestIdRef.current === requestId) setChainTicker(null);
     }
+  };
+
+  const closeChainModal = () => {
+    // Invalidate any in-flight fetch so closing the dialog cannot reopen it on late response.
+    chainRequestIdRef.current += 1;
+    setChainModalTicker(null);
+    setChainTicker(null);
+    setChain(null);
+    setChainError(null);
   };
 
   const prefillPosition = (ticker: string, contract: OptionContract, costBasis: number | null) => {
@@ -94,13 +110,24 @@ export function LiveWheelView() {
       expiration: contract.expiration,
       premium: premium.toFixed(2),
       quantity: "1",
-      costBasis: contract.type === "put" ? "" : costBasis == null ? current.costBasis : String(costBasis),
+      costBasis: contract.type === "put"
+        ? ""
+        : costBasis != null
+          ? String(costBasis)
+          : current.ticker.toUpperCase() === ticker.toUpperCase() ? current.costBasis : "",
       openedAt: new Date().toISOString().slice(0, 10),
       notes: `Prefilled from ${contract.symbol}; review quote and enter actual fill before saving.`,
     }));
     setDetailTicker(null);
     setMessage(`${ticker.toUpperCase()} ${contract.type} prefilled in the journal form. Review the details and actual fill before saving.`);
     window.setTimeout(() => journalFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
+
+  const useChainContract = (contract: OptionContract) => {
+    const ticker = chainModalTicker;
+    if (!ticker) return;
+    closeChainModal();
+    prefillPosition(ticker, contract, null);
   };
 
   const savePosition = async (event: FormEvent) => {
@@ -163,7 +190,18 @@ export function LiveWheelView() {
 
       {(results?.earningsWatch.length || results?.heldBackByEarnings.length) ? <section className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4"><div className="flex items-center gap-2 text-xs font-bold text-amber-200"><CalendarClock className="h-4 w-4" />Upcoming earnings watch</div><div className="mt-3 flex flex-wrap gap-2">{results?.earningsWatch.slice(0, 12).map((item) => <span key={item.g.row.ticker} className="rounded-lg border border-amber-500/10 bg-slate-950/50 px-2.5 py-1.5 text-[10px] text-amber-100">{item.g.row.ticker} · {item.days}d {item.estimated ? "· est." : ""}</span>)}</div></div><div className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="flex items-center gap-2 text-xs font-bold text-slate-300"><ShieldAlert className="h-4 w-4 text-rose-300" />Held back by earnings filter</div><div className="mt-3 flex flex-wrap gap-2">{results?.heldBackByEarnings.slice(0, 12).map((item) => <span key={item.ticker} className="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[10px] text-slate-400">{item.ticker} · {item.days == null ? "date unknown" : `${item.days}d`}</span>)}</div></div></section> : null}
 
-      {chain && <section className="rounded-xl border border-cyan-500/20 bg-slate-900 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-sm font-bold text-white">{chain.symbol} option-chain snapshot</h3><p className="mt-1 text-[10px] text-slate-500">Underlying {cash(chain.price)} · {chain.source} · {chain.fetchedAt ? new Date(chain.fetchedAt).toLocaleString() : "timestamp unavailable"} {chain.stale ? "· cached/stale" : ""}</p></div><button onClick={() => { setChain(null); setChainTicker(null); }} className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-400 hover:text-white">Close</button></div><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{chain.contracts.slice(0, 16).map((contract, index) => <div key={`${contract.type}-${contract.expiration}-${contract.strike}-${index}`} className="rounded-lg border border-slate-800 bg-slate-950 p-3"><div className="flex justify-between text-[10px] uppercase text-slate-500"><span>{contract.type}</span><span>{contract.expiration}</span></div><div className="mt-1 font-mono text-sm font-bold text-white">${contract.strike.toFixed(2)}</div><div className="mt-1 font-mono text-[10px] text-slate-400">Bid {cash(contract.bid)} · Ask {cash(contract.ask)}</div><div className="mt-1 text-[10px] text-slate-600">Δ {contract.delta?.toFixed(2) ?? "N/A"} · IV {pct(contract.iv)} · OI {contract.oi?.toLocaleString() ?? "N/A"}</div></div>)}</div>{chain.contracts.length === 0 && <p className="mt-4 text-xs text-slate-500">Provider returned no contracts for the selected date range.</p>}</section>}
+      {chainModalTicker && (
+        <LiveWheelChainModal
+          key={chainModalTicker}
+          ticker={chainModalTicker}
+          chain={chain}
+          loading={chainTicker === chainModalTicker}
+          error={chainError}
+          onClose={closeChainModal}
+          onRetry={() => void loadChain(chainModalTicker)}
+          onUseContract={useChainContract}
+        />
+      )}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]"><div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900"><div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3"><div><h3 className="text-sm font-bold text-white">Saved wheel positions</h3><p className="mt-1 text-[10px] text-slate-500">Manual journal entries—not connected to a brokerage account.</p></div><span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400">{positions.length} entries</span></div><div className="overflow-x-auto"><table className="min-w-[720px] w-full text-left text-xs"><thead className="bg-slate-950 text-[10px] uppercase tracking-wider text-slate-500"><tr>{["Ticker / side", "Strike", "Expiration", "Premium", "Qty", "Opened", "Status", "Actions"].map((item) => <th key={item} className="px-3 py-3 font-semibold">{item}</th>)}</tr></thead><tbody className="divide-y divide-slate-800/80">{positions.map((position) => <tr key={position.id} className="hover:bg-slate-800/40"><td className="px-3 py-3"><span className="font-mono font-bold text-white">{position.ticker}</span><div className="text-[9px] text-slate-500">{position.side.replaceAll("_", " ")}</div></td><td className="px-3 py-3 font-mono text-slate-300">${position.strike.toFixed(2)}</td><td className="px-3 py-3 font-mono text-slate-400">{position.expiration}</td><td className="px-3 py-3 font-mono text-emerald-300">{cash(position.premium)}</td><td className="px-3 py-3 font-mono text-slate-300">{position.quantity}</td><td className="px-3 py-3 font-mono text-slate-400">{position.openedAt}</td><td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[9px] ${position.side === "closed" ? "bg-slate-800 text-slate-400" : "bg-emerald-500/10 text-emerald-300"}`}>{position.closedAt ? `Closed ${position.closedAt}` : "Open"}</span></td><td className="px-3 py-3"><div className="flex items-center gap-1">{position.side !== "closed" && <button onClick={() => void closePosition(position)} disabled={saving} className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[9px] text-slate-300 hover:text-white disabled:opacity-40"><CheckCircle2 className="h-3 w-3" />Close</button>}<button onClick={() => void deletePosition(position)} disabled={saving} className="rounded-md border border-rose-500/20 p-1 text-rose-300 hover:bg-rose-500/10 disabled:opacity-40" aria-label="Delete saved position"><Trash2 className="h-3 w-3" /></button></div></td></tr>)}{positions.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-xs text-slate-500">No saved wheel entries. Log a position with the form.</td></tr>}</tbody></table></div></div>
         <form ref={journalFormRef} onSubmit={savePosition} className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="flex items-center gap-2"><Plus className="h-4 w-4 text-emerald-300" /><h3 className="text-xs font-bold text-white">Log a wheel trade</h3></div><div className="mt-3 space-y-2"><label className="block text-[10px] text-slate-500">Ticker<input required maxLength={10} value={entry.ticker} onChange={(event) => setEntry({ ...entry, ticker: event.target.value.toUpperCase() })} className={inputClass + " mt-1"} placeholder="AAPL" /></label><label className="block text-[10px] text-slate-500">Lifecycle stage<select value={entry.side} onChange={(event) => setEntry({ ...entry, side: event.target.value })} className={inputClass + " mt-1"}><option value="put_sold">Cash-secured put sold</option><option value="assigned">Assigned shares</option><option value="call_sold">Covered call sold</option><option value="closed">Closed trade</option></select></label><div className="grid grid-cols-2 gap-2"><label className="text-[10px] text-slate-500">Strike<input required type="number" min="0.01" step="any" value={entry.strike} onChange={(event) => setEntry({ ...entry, strike: event.target.value })} className={inputClass + " mt-1"} /></label><label className="text-[10px] text-slate-500">Expiration<input required type="date" value={entry.expiration} onChange={(event) => setEntry({ ...entry, expiration: event.target.value })} className={inputClass + " mt-1"} /></label></div><div className="grid grid-cols-2 gap-2"><label className="text-[10px] text-slate-500">Premium / share<input required type="number" min="0" step="any" value={entry.premium} onChange={(event) => setEntry({ ...entry, premium: event.target.value })} className={inputClass + " mt-1"} /></label><label className="text-[10px] text-slate-500">Contracts<input required type="number" min="1" max="10000" step="1" value={entry.quantity} onChange={(event) => setEntry({ ...entry, quantity: event.target.value })} className={inputClass + " mt-1"} /></label></div><label className="block text-[10px] text-slate-500">Opened<input required type="date" value={entry.openedAt} onChange={(event) => setEntry({ ...entry, openedAt: event.target.value })} className={inputClass + " mt-1"} /></label><label className="block text-[10px] text-slate-500">Notes<input maxLength={1000} value={entry.notes} onChange={(event) => setEntry({ ...entry, notes: event.target.value })} className={inputClass + " mt-1"} placeholder="Optional" /></label><button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-bold text-slate-950 hover:bg-emerald-500 disabled:opacity-50"><Plus className="h-3.5 w-3.5" />Save journal entry</button></div></form>
