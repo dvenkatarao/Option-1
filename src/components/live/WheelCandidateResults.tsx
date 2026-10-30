@@ -11,7 +11,7 @@ function Metric({ label, value, tone = "text-slate-100", title }: { label: strin
   return (
     <div className="min-w-0" title={title}>
       <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-      <div className={`mt-0.5 truncate font-mono text-sm font-bold ${tone}`}>{value}</div>
+      <div className={`mt-0.5 break-words font-mono text-sm font-bold ${tone}`}>{value}</div>
     </div>
   );
 }
@@ -34,79 +34,81 @@ function CandidateCard({
   const score = Number.isFinite(row.best.score) ? row.best.score.toFixed(0) : "N/A";
 
   return (
-    <article className="flex min-w-0 flex-col rounded-xl border border-slate-800 bg-slate-950/60 p-3.5 transition-colors hover:border-slate-700">
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => onOpenDetail(ticker)} className="font-mono text-lg font-extrabold leading-none text-white hover:text-emerald-300" aria-label={`Open ${ticker} detail workspace`}>{ticker}</button>
-            <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300">Grade {row.g.grade ?? "N/A"}</span>
-          </div>
-          <p className="mt-1 truncate text-[10px] text-slate-400">{row.g.row.name ?? "Provider-backed stock"}</p>
-        </div>
-        <div className="shrink-0 text-right">
-          <div className="font-mono text-base font-bold leading-none text-white">{cash(row.ctx.price)}</div>
-          <div className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">Underlying</div>
-        </div>
-      </header>
-
-      <p className="mt-2 truncate text-[9px] text-slate-500">
-        {row.g.row.sector ?? "Sector unavailable"} · {row.ctx.nextEarnings ? `Earnings ${row.ctx.nextEarnings}${row.g.row.events?.earningsEstimated ? " · est." : ""}` : "Earnings unknown"}
-      </p>
-
-      <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-2">
-        <div title="Wheel ranking heuristic; not probability of profit.">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Wheel score</div>
-          <div className="mt-0.5 font-mono text-xs font-bold text-emerald-300">{score}</div>
-        </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">IV rank</div>
-          <div className="mt-0.5 font-mono text-xs font-bold text-cyan-300">{ivRank == null ? "N/A" : `${ivRank}%`}</div>
-        </div>
-        <div title="Model-derived account-fit hint; not connected to a brokerage account.">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Account hint</div>
-          <div className="mt-0.5 font-mono text-xs font-bold text-cyan-200">{row.best.account.flag}</div>
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/10 to-slate-950 p-3">
-        <div className="flex items-start justify-between gap-3">
+    <article className="group flex min-w-0 flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-lg transition hover:border-emerald-500/50">
+      <div className="min-w-0">
+        <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/70">Best qualifying cash-secured put</div>
-            <div className="mt-1 font-mono text-xl font-extrabold leading-none text-white">${row.best.contract.strike.toFixed(2)} <span className="text-[10px] font-medium text-slate-400">strike</span></div>
-            <div className="mt-1.5 text-[9px] text-slate-400">Expires {row.best.contract.expiration} · {row.best.dte} DTE</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => onOpenDetail(ticker)} className="font-mono text-xl font-extrabold leading-none text-white transition group-hover:text-emerald-400" aria-label={`Open ${ticker} detail workspace`}>{ticker}</button>
+              <span title="Wheel ranking heuristic; not probability of profit." className="rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">Wheel Score {score}{score === "N/A" ? "" : "/100"}</span>
+            </div>
+            <p className="mt-1 break-words text-xs font-medium text-slate-400">{row.g.row.name ?? "Provider-backed stock"}</p>
           </div>
-          <div className="shrink-0 rounded-lg border border-slate-700/80 bg-slate-950/80 px-2.5 py-1.5 text-right">
-            <div className="text-[10px] uppercase tracking-wider text-slate-500">Put delta</div>
-            <div className="mt-0.5 font-mono text-sm font-bold text-slate-200">{delta}</div>
+          <div className="shrink-0 text-right font-mono">
+            <span className="text-sm font-bold text-slate-100">{cash(row.ctx.price)}</span>
+            <span className="block text-[10px] uppercase tracking-wider text-slate-500">Underlying</span>
+          </div>
+        </header>
+
+        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+          {row.g.row.sector ?? "Sector unavailable"} · {row.ctx.nextEarnings ? `Earnings ${row.ctx.nextEarnings}${row.g.row.events?.earningsEstimated ? " · est." : ""}` : "Earnings unknown"}
+        </p>
+
+        <div className="my-3.5 grid grid-cols-3 gap-2 rounded-xl border border-slate-800/80 bg-slate-950/80 px-3 py-2.5 font-mono text-xs">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Quality grade</div>
+            <div className="mt-0.5 break-words font-bold text-emerald-300">{row.g.grade ?? "N/A"}</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">IV rank</div>
+            <div className="mt-0.5 break-words font-bold text-cyan-300">{ivRank == null ? "N/A" : `${ivRank}%`}</div>
+          </div>
+          <div title="Model-derived account-fit hint; not connected to a brokerage account.">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Account hint</div>
+            <div className="mt-0.5 break-words font-bold text-cyan-200">{row.best.account.flag}</div>
           </div>
         </div>
+
+        <div className="space-y-2 rounded-xl border border-emerald-800/40 bg-gradient-to-br from-emerald-950/30 to-slate-950/80 p-3.5 text-xs">
+          <div className="flex items-start justify-between gap-3 border-b border-emerald-900/30 pb-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-200/70">Best qualifying cash-secured put</div>
+              <div className="mt-1 font-mono text-xl font-extrabold leading-none text-white">${row.best.contract.strike.toFixed(2)} <span className="text-[10px] font-medium text-slate-400">strike</span></div>
+              <div className="mt-1.5 text-[10px] text-slate-400">Expires {row.best.contract.expiration} · {row.best.dte} DTE</div>
+            </div>
+            <div className="shrink-0 rounded-lg border border-slate-700/80 bg-slate-950/80 px-2.5 py-1.5 text-right">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500">Put delta</div>
+              <div className="mt-0.5 font-mono text-sm font-bold text-slate-200">{delta}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-[11px]">
+            <Metric label="Credit / share" value={cash(row.best.credit)} tone="text-emerald-300" />
+            <Metric label="Annualized ROC" value={pct(row.best.annRoc)} title="Simple premium-to-cash calculation; not a forecast." />
+            <Metric label="OTM proxy" value={pct(row.best.probOtm)} title="Delta-derived proxy, not a measured win rate." />
+            <Metric label="Cash secured / contract" value={cash(row.best.cash)} title="Per contract; not account buying power." />
+          </div>
+          <p className="border-t border-slate-800/80 pt-2 text-[10px] leading-relaxed text-slate-500">Annualized ROC is simple premium-to-cash math, not a forecast; OTM is a delta-derived proxy, not a measured win rate.</p>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-800 pb-3 text-[10px] text-slate-500">
+          <span>Breakeven <b className="font-mono text-slate-300">{cash(row.best.breakeven)}</b> · Cushion <b className="font-mono text-slate-300">{pct(row.best.breakevenCushion)}</b></span>
+          <span>{row.count} qualifying contract{row.count === 1 ? "" : "s"}</span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px]">
+          <span className="max-w-full break-words rounded-full border border-slate-800 bg-slate-950 px-2 py-1 text-slate-400">{row.source ?? "Provider source unavailable"}</span>
+          {row.stale
+            ? <span title="This scan is older than the expected freshness window." className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-200">Stale scan</span>
+            : <span title="This scan is within the expected freshness window." className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">Fresh scan</span>}
+          <span className="text-slate-500">Scanned {timestamp(row.scannedAt)}</span>
+        </div>
+        {row.fallbackReason && <p className="mt-2 break-words text-[10px] leading-relaxed text-amber-200/80">Fallback context: {row.fallbackReason}</p>}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5">
-        <Metric label="Credit / share" value={cash(row.best.credit)} tone="text-emerald-300" />
-        <Metric label="Annualized ROC" value={pct(row.best.annRoc)} title="Simple premium-to-cash calculation; not a forecast." />
-        <Metric label="OTM proxy" value={pct(row.best.probOtm)} title="Delta-derived proxy, not a measured win rate." />
-        <Metric label="Cash secured / contract" value={cash(row.best.cash)} title="Per contract; not account buying power." />
-        <p className="col-span-2 text-[10px] leading-relaxed text-slate-500">Annualized ROC is a simple premium-to-cash calculation; OTM is a delta-derived proxy.</p>
-      </div>
-
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-800 pb-2 text-[9px] text-slate-500">
-        <span>Breakeven <b className="font-mono text-slate-300">{cash(row.best.breakeven)}</b> · Cushion <b className="font-mono text-slate-300">{pct(row.best.breakevenCushion)}</b></span>
-        <span>{row.count} qualifying contract{row.count === 1 ? "" : "s"}</span>
-      </div>
-
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px]">
-        <span className="rounded-full border border-slate-800 bg-slate-950 px-2 py-1 text-slate-400">{row.source ?? "Provider source unavailable"}</span>
-        {row.stale
-          ? <span title="This scan is older than the expected freshness window." className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-200">Stale scan</span>
-          : <span title="This scan is within the expected freshness window." className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">Fresh scan</span>}
-        <span className="text-slate-500">Scanned {timestamp(row.scannedAt)}</span>
-      </div>
-      {row.fallbackReason && <p className="mt-1.5 text-[10px] leading-relaxed text-amber-200/80">Fallback context: {row.fallbackReason}</p>}
-
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <button onClick={() => onOpenDetail(ticker)} className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-2 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/10">Detail workspace</button>
-        <button disabled={chainLoading} onClick={() => onLoadChain(ticker)} className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-[10px] font-semibold text-slate-300 hover:text-white disabled:cursor-wait disabled:opacity-60">{chainLoading ? "Loading chain…" : "Chain snapshot"}</button>
+      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-800 pt-3">
+        <button type="button" onClick={() => onOpenDetail(ticker)} className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/10">Detail workspace</button>
+        <button type="button" disabled={chainLoading} onClick={() => onLoadChain(ticker)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[10px] font-semibold text-slate-300 hover:text-white disabled:cursor-wait disabled:opacity-60">{chainLoading ? "Loading chain…" : "Chain snapshot"}</button>
       </div>
     </article>
   );
@@ -168,7 +170,7 @@ export function WheelCandidateResults({
       ) : !results || results.rows.length === 0 ? (
         <div className="p-8 text-center text-xs text-slate-500">No contracts pass the current filters yet. Hydrate stock data, scan fresh chains, or widen the filter settings.</div>
       ) : viewMode === "cards" ? (
-        <div className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 p-4 md:grid-cols-2 lg:grid-cols-3">
           {results.rows.map((row) => <CandidateCard key={row.g.row.ticker} row={row} ivRank={results.ivRanks?.[row.g.row.ticker]} chainLoading={chainTicker === row.g.row.ticker} onOpenDetail={onOpenDetail} onLoadChain={onLoadChain} />)}
         </div>
       ) : (
