@@ -60,6 +60,7 @@ See [`.env.example`](.env.example) and [`DEPLOYMENT.md`](DEPLOYMENT.md). Key set
 - `WHEEL_SCANNER`, `WHEEL_EXTRA_SYMBOLS`, `QUOTE_SNAPSHOTS` — background refresh/snapshot behavior.
 - `FRED_API_KEY`, `FINNHUB_API_KEY` — optional enhanced source access.
 - `NEXT_PUBLIC_ENABLE_SAMPLE_ETF_SCREENS` — defaults to `false`, showing Live ETF Research without the bundled sample screener/comparison tabs. Set to `true` to reveal them; restart `next dev` locally or rebuild/redeploy production. This is a public UI flag, not a secret.
+- `NEXT_PUBLIC_ENABLE_SAMPLE_WHEEL_SCREENS` — defaults to `false`, hiding the bundled Wheel Opportunity Scanner and placing Live Provider Scanner & Journal first. Set to `true` to show the sample scanner; restart `next dev` locally or rebuild/redeploy production. This is a public UI flag, not a secret.
 
 Live SnapTrade/Plaid broker connections are not implemented; the API returns an explicit not-supported response. Use CSV imports or manual ledger entries for real positions. Sample/demo portfolios are explicitly labeled.
 
