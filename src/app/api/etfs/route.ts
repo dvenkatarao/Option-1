@@ -19,11 +19,18 @@ export const GET = handle(async (req: Request) => {
   ]);
   const quotes = funds.length ? await getQuotes(funds.map((fund) => fund.ticker)) : { quotes: new Map(), fetchedAt: null, stale: false };
   const rows = funds
-    .filter((fund) => !query || `${fund.ticker} ${fund.name ?? ""} ${fund.family ?? ""} ${fund.category ?? ""}`.toLowerCase().includes(query))
+    .filter((fund) => {
+      if (!query) return true;
+      const metadata = `${fund.ticker} ${fund.name ?? ""} ${fund.family ?? ""} ${fund.category ?? ""}`;
+      const holdings = (fund.profile?.holdings ?? []).map((holding) => `${holding.symbol ?? ""} ${holding.name}`).join(" ");
+      return `${metadata} ${holdings}`.toLowerCase().includes(query);
+    })
     .map((fund) => toScreenRow(fund, quotes.quotes.get(fund.ticker), riskFree.rate, { spread: spreads.get(fund.ticker) ?? null }));
+  const categories = Array.from(new Set(funds.map((fund) => fund.category?.trim()).filter((category): category is string => Boolean(category)))).sort((a, b) => a.localeCompare(b));
 
   return Response.json({
     rows,
+    categories,
     count: rows.length,
     hydrated: funds.length,
     totalUniverse: universe.status.totalCount,

@@ -41,6 +41,13 @@ describe("computeMetrics", () => {
     expect(m.dividends.frequency).toBe("Quarterly");
     expect(m.dividends.ttmAmount).toBe(4);
   });
+  it("computes 5Y distribution CAGR only when six years of source history are available", () => {
+    expect(m.dividends.cagr5y).toBeNull();
+    const longHistory = series(7);
+    const end = longHistory.t[longHistory.t.length - 1];
+    longHistory.d = Array.from({ length: 28 }, (_, q) => [end - q * 91.3125 * DAY, 1] as [number, number]).reverse();
+    expect(computeMetrics(longHistory)!.dividends.cagr5y).toBeCloseTo(0, 2);
+  });
   it("reports no NAV erosion for a rising price", () => {
     expect(m.erosion.level).toBe("None");
   });

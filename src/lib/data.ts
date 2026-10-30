@@ -54,6 +54,8 @@ export function toScreenRow(r: EtfRow, q: YahooQuote | undefined, rf: number | n
     priceRet3y: m.erosion.priceReturnAnn3y,
     capFunded: m.erosion.capitalFundedShare3y,
     divCagr3y: m.dividends.cagr3y,
+    divCagr5y: m.dividends.cagr5y ?? null,
+    lastExDate: m.dividends.lastExDate,
     analystRec: null,
     analystCoverage: null,
     freq: m.dividends.frequency,

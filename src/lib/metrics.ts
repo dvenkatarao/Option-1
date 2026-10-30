@@ -142,8 +142,11 @@ export function computeMetrics(h: HistoryJson, lastClose?: number | null): EtfMe
   const prevAmount = prev.reduce((s, [, v]) => s + v, 0);
   const y3Start = lastT - 365 * 3 * DAY;
   const ttm3Ago = h.d.filter(([t]) => t > y3Start - 365 * DAY && t <= y3Start).reduce((s, [, v]) => s + v, 0);
+  const y5Start = lastT - 365 * 5 * DAY;
+  const ttm5Ago = h.d.filter(([t]) => t > y5Start - 365 * DAY && t <= y5Start).reduce((s, [, v]) => s + v, 0);
   const histCovers2y = first <= prevStart + 5 * DAY;
   const histCovers4y = first <= y3Start - 365 * DAY + 5 * DAY;
+  const histCovers6y = first <= y5Start - 365 * DAY + 5 * DAY;
   const lastDiv = h.d.length ? h.d[h.d.length - 1] : null;
   const freq = frequencyLabel(ttm.length);
 
@@ -187,6 +190,7 @@ export function computeMetrics(h: HistoryJson, lastClose?: number | null): EtfMe
       lastExDate: lastDiv ? iso(lastDiv[0]) : null,
       growth1y: histCovers2y && prevAmount > 0 ? ttmAmount / prevAmount - 1 : null,
       cagr3y: histCovers4y && ttm3Ago > 0 && ttmAmount > 0 ? (ttmAmount / ttm3Ago) ** (1 / 3) - 1 : null,
+      cagr5y: histCovers6y && ttm5Ago > 0 && ttmAmount > 0 ? (ttmAmount / ttm5Ago) ** (1 / 5) - 1 : null,
       cum3yPctOfStartPrice: cum3y != null && startPrice3y ? cum3y / startPrice3y : null,
     },
     erosion: {

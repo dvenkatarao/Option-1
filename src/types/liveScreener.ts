@@ -28,6 +28,10 @@ export type ScreenRow = {
   priceRet3y: number | null;
   capFunded: number | null;
   divCagr3y: number | null;
+  /** Rolling-TTM distribution CAGR versus five years earlier; requires six years of stored dividend history. */
+  divCagr5y: number | null;
+  /** Most recent provider-reported distribution ex-date; this is historical, not the next scheduled date. */
+  lastExDate: string | null;
   /** Holdings-weighted analyst recommendation mean (Yahoo scale: 1=strong buy, 5=sell); optional on demand. */
   analystRec: number | null;
   /** Share of reported top-holdings weight with recommendation data, 0-1. */

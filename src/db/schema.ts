@@ -210,6 +210,8 @@ export type EtfMetricsJson = {
     lastExDate: string | null;
     growth1y: number | null;
     cagr3y: number | null;
+    /** CAGR of rolling TTM distributions versus the TTM window five years earlier; null without six years of history. */
+    cagr5y: number | null;
     /** distributions over last 3y as fraction of price 3y ago (not annualised) */
     cum3yPctOfStartPrice: number | null;
   };
