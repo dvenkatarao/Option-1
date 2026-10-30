@@ -171,7 +171,7 @@ export function LiveStockSearchPreview({
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Underlying</div>
                   <div className="mt-1 font-mono text-lg font-bold text-white">{cash(quotePrice)}</div>
-                  <div className="mt-1 text-[9px] text-slate-600">{profile.quote?.marketState ?? (profile.quote?.price == null ? "Stored close fallback" : "Provider quote")}</div>
+                  <div className="mt-1 text-[9px] text-slate-600">{profile.quote?.price == null ? (profile.stock.storedPrice == null ? "Quote unavailable" : "Stored close fallback") : profile.quote.marketState ?? "Provider quote"}</div>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Day change</div>
@@ -189,7 +189,7 @@ export function LiveStockSearchPreview({
               </div>
 
               <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-[10px] leading-relaxed text-slate-400">
-                <div>Quote source: <b className="text-slate-200">{profile.quoteSource}</b>{profile.quoteStale ? " · cached/stale" : ""}</div>
+                <div>Quote source: <b className="text-slate-200">{profile.quote?.price == null ? `No quote price · ${profile.quoteSource}` : profile.quoteSource}</b>{profile.quoteStale ? " · cached/stale" : ""}</div>
                 <div>Quote fetched: <b className="text-slate-200">{timestamp(profile.quoteFetchedAt)}</b></div>
                 <div>Profile refresh: <b className={profile.stock.lastError ? "text-amber-200" : "text-slate-200"}>{profile.stock.lastError ? `Failed · ${timestamp(profile.stock.refreshedAt)}` : timestamp(profile.stock.refreshedAt)}</b></div>
               </div>
